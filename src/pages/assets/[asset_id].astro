@@ -1,0 +1,738 @@
+---
+import AssetReview from "../../components/AssetReview.astro";
+import AssetAssessmentDecision from "../../components/AssetAssessmentDecision.astro";
+import { getAssessmentLedger, type AssessmentAsset, type AssessmentResource } from "../../lib/assessment";
+import { getAssetReviews, canOpenReviewedAsset, getHazardCascadeDomain, reviewedAssetAccessLabel } from "../../lib/asset-review";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import MapExtentButton from "../../components/MapExtentButton.astro";
+import MapExtentModal from "../../components/MapExtentModal.astro";
+import { getPublicData } from "../../lib/data";
+import { fieldState, formatDate, formatDateRange, humanize, licenceStatement, splitValues, withBase } from "../../lib/format";
+import {
+  parseAssetTechnicalNotes,
+  getAssetScientificRole,
+  getCleanTemporalRole,
+  getCleanContributorDisplay,
+  getCleanMethodStatus,
+  parseBoundingBox,
+} from "../../lib/asset-intelligence";
+import type { Asset, Resource } from "../../lib/types";
+
+export async function getStaticPaths() {
+  const [{ resources, assets }, ledger] = await Promise.all([getPublicData(), getAssessmentLedger()]);
+  const resourceById = new Map(resources.map((resource) => [resource.resource_id, resource]));
+  const assessmentByResource = new Map(ledger.resources.map((row) => [row.resource_id, row]));
+  const includedIds = new Set(assets.map((asset) => asset.asset_id));
+  return [
+    ...assets.map((asset) => ({
+      params: { asset_id: asset.asset_id },
+      props: { asset, resource: resourceById.get(asset.resource_id)! },
+    })),
+    ...ledger.assets.filter((row) => row.eligibility_outcome !== "include" && !includedIds.has(row.asset_id)).map((excludedAssessment) => ({
+      params: { asset_id: excludedAssessment.asset_id },
+      props: { excludedAssessment, parentAssessment: assessmentByResource.get(excludedAssessment.resource_id) },
+    })),
+  ];
+}
+
+interface Props {
+  asset?: Asset;
+  resource?: Resource;
+  excludedAssessment?: AssessmentAsset;
+  parentAssessment?: AssessmentResource;
+}
+
+const { asset, resource, excludedAssessment, parentAssessment } = Astro.props;
+async function includedDetails(asset: Asset, resource: Resource) {
+const review = (await getAssetReviews()).byId.get(asset.asset_id)!;
+const sources = splitValues(asset.source_evidence_urls);
+const originalLanguage = new Intl.DisplayNames(["en"], { type: "language" }).of(asset.title_language) ?? asset.title_language;
+const hasDistinctOriginalTitle = asset.title_original !== asset.title;
+
+const domain = getHazardCascadeDomain(asset.title, asset.asset_type, asset.dataset_family);
+const techNotes = parseAssetTechnicalNotes(asset.notes);
+const scientificRole = review.assessment?.information_role ? humanize(review.assessment.information_role) : getAssetScientificRole(domain.id);
+const temporalRole = getCleanTemporalRole(asset.temporal_role, review.temporal_assessment, asset.temporal_start, asset.temporal_end);
+const contributor = getCleanContributorDisplay(asset.normalized_contributors, asset.listed_contributor, asset.host_or_aggregator);
+const methodStatus = getCleanMethodStatus(asset.method_status);
+const bboxCoords = parseBoundingBox(asset.bbox_wgs84);
+
+const coverage = asset.bbox_wgs84
+  ? `WGS 84 bounding box: ${asset.bbox_wgs84}`
+  : resource.geographic_scope
+    ? `Parent resource coverage: ${resource.geographic_scope}`
+    : "Not stated";
+const description = `${domain.label} — ${asset.title}. ${temporalRole.label}. ${coverage}`;
+const assetLicence = licenceStatement(asset.license_spdx, asset.license_url, asset.rights_status, asset.rights_note);
+const pageUrl = new URL(withBase(`assets/${asset.asset_id}/`), Astro.site).toString();
+const canOpen = canOpenReviewedAsset(review);
+const accessLabel = reviewedAssetAccessLabel(review);
+const isPdf = asset.file_format?.toLowerCase() === "pdf";
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "CreativeWork",
+  name: asset.title,
+  url: pageUrl,
+  isPartOf: {
+    "@type": "CreativeWork",
+    name: resource.canonical_title,
+    url: new URL(withBase(`resources/${resource.resource_id}/`), Astro.site).toString(),
+  },
+  contentUrl: canOpen ? asset.asset_url : undefined,
+  encodingFormat: asset.media_type || undefined,
+  license: asset.license_url ?? undefined,
+};
+return { review, sources, originalLanguage, hasDistinctOriginalTitle, domain, techNotes, scientificRole, temporalRole, contributor, methodStatus, bboxCoords, coverage, description, assetLicence, pageUrl, canOpen, accessLabel, isPdf, jsonLd };
+}
+const details = asset && resource ? await includedDetails(asset, resource) : null;
+const { review, sources, originalLanguage, hasDistinctOriginalTitle, domain, techNotes, scientificRole, temporalRole, contributor, methodStatus, bboxCoords, coverage, description, assetLicence, pageUrl, canOpen, accessLabel, isPdf, jsonLd } = details ?? ({} as Awaited<ReturnType<typeof includedDetails>>);
+---
+
+{excludedAssessment ? <AssetAssessmentDecision assessment={excludedAssessment} parent={parentAssessment} /> : asset && resource && <BaseLayout title={asset.title} description={description} jsonLd={jsonLd}>
+  <div class="asset-sheet">
+    <div class="container sheet-container">
+
+      <!-- Breadcrumbs -->
+      <nav class="breadcrumb" aria-label="Breadcrumbs">
+        <a href={withBase("assets/")}>Assets</a>
+        <span aria-hidden="true">/</span>
+        <a href={withBase(`resources/${resource.resource_id}/`)} class="breadcrumb-parent" title={resource.canonical_title}>
+          {resource.canonical_title}
+        </a>
+      </nav>
+
+      <!-- Main Header -->
+      <header class="sheet-header">
+        <div class="header-tags">
+          <span class={`domain-badge domain-badge--${domain.id}`}>{domain.label}</span>
+          <span class="epoch-badge">{temporalRole.label}</span>
+          <span class="access-badge">{accessLabel}</span>
+        </div>
+
+        <h1 class="sheet-title">{asset.title}</h1>
+
+        {hasDistinctOriginalTitle && (
+          <p class="sheet-original-title">
+            <span class="lang-tag">{originalLanguage}</span>
+            <span lang={asset.title_language}>{asset.title_original}</span>
+          </p>
+        )}
+
+        <!-- Purpose / Scientific Role Lead -->
+        <p class="sheet-lead">
+          {scientificRole}
+        </p>
+
+        <!-- Primary Download Action Banner -->
+        {canOpen && (
+          <div class="sheet-download-bar">
+            <a class="button download-btn" href={asset.asset_url} target="_blank" rel="noreferrer">
+              <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M3 17a1 1 0 001 1h12a1 1 0 100-2H4a1 1 0 00-1 1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+              </svg>
+              <span>{review.access.route === "free_registration" ? "Access through free registration" : isPdf ? "Open document (PDF)" : `Open access route (${asset.file_format?.toUpperCase() || "File"})`}</span>
+              <span class="btn-arrow" aria-hidden="true">↗</span>
+            </a>
+
+            <div class="download-meta">
+              {asset.size_as_shown && <span><strong>{asset.size_as_shown}</strong></span>}
+              {asset.crs && <span>CRS: <code>{asset.crs}</code></span>}
+              {techNotes.featureCount !== null && <span><strong>{techNotes.featureCount.toLocaleString("en")}</strong> features</span>}
+              {techNotes.pageCount !== null && <span><strong>{techNotes.pageCount}</strong> pages</span>}
+            </div>
+          </div>
+        )}
+      </header>
+
+      <!-- Unified Specifications Sheet -->
+      <main class="sheet-body">
+        <section class="sheet-section">
+          <h2>Dataset Specifications</h2>
+
+          <table class="spec-table">
+            <tbody>
+              <!-- Contents & Anatomy -->
+              {(techNotes.featureCount !== null || techNotes.memberCount !== null || techNotes.pageCount !== null) && (
+                <tr>
+                  <th scope="row">Packaged contents</th>
+                  <td>
+                    <div class="anatomy-pills">
+                      {techNotes.featureCount !== null && <span class="pill"><strong>{techNotes.featureCount.toLocaleString("en")}</strong> vector features</span>}
+                      {techNotes.attributeCount !== null && <span class="pill"><strong>{techNotes.attributeCount}</strong> attributes</span>}
+                      {techNotes.memberCount !== null && <span class="pill"><strong>{techNotes.memberCount}</strong> files in archive</span>}
+                      {techNotes.pageCount !== null && <span class="pill"><strong>{techNotes.pageCount}</strong> pages</span>}
+                      {techNotes.version && <span class="pill">Version {techNotes.version}</span>}
+                    </div>
+                    {techNotes.memberFormats.length > 0 && (
+                      <p class="format-list">
+                        Member formats: <code>{techNotes.memberFormats.join(", ")}</code>
+                      </p>
+                    )}
+                    {techNotes.additionalNotes && (
+                      <p class="table-note">{techNotes.additionalNotes}</p>
+                    )}
+                  </td>
+                </tr>
+              )}
+
+              <!-- Geographic Scope -->
+              <tr>
+                <th scope="row">Spatial extent</th>
+                <td>
+                  <div class="extent-cell">
+                    {bboxCoords ? (
+                      <div class="coords-line">
+                        <code>{bboxCoords.west}</code> to <code>{bboxCoords.east}</code>, <code>{bboxCoords.south}</code> to <code>{bboxCoords.north}</code>
+                      </div>
+                    ) : (
+                      <span>{coverage}</span>
+                    )}
+                    <MapExtentButton bbox={asset.bbox_wgs84} label={asset.title} />
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Coordinate System -->
+              {asset.crs && (
+                <tr>
+                  <th scope="row">Coordinate system</th>
+                  <td><code>{asset.crs}</code></td>
+                </tr>
+              )}
+
+              <!-- Temporal Window -->
+              <tr>
+                <th scope="row">Temporal coverage</th>
+                <td>
+                  <strong>{formatDateRange(asset.temporal_start, asset.temporal_end)}</strong>
+                  <span class="cell-sub">{temporalRole.label} {temporalRole.detail ? `· ${temporalRole.detail}` : ""}</span>
+                </td>
+              </tr>
+
+              <!-- Contributing Agency -->
+              <tr>
+                <th scope="row">Source & contributor</th>
+                <td>
+                  <strong>{contributor.primary}</strong>
+                  {contributor.secondary && <span class="cell-sub">{contributor.secondary}</span>}
+                  {asset.host_or_aggregator && asset.host_or_aggregator !== contributor.primary && (
+                    <span class="cell-sub">Host platform: {asset.host_or_aggregator}</span>
+                  )}
+                </td>
+              </tr>
+
+              <!-- Parent Collection -->
+              <tr>
+                <th scope="row">Parent collection</th>
+                <td>
+                  <a href={withBase(`resources/${resource.resource_id}/`)}>
+                    {resource.canonical_title}
+                  </a>
+                </td>
+              </tr>
+
+              <!-- Format & Size -->
+              <tr>
+                <th scope="row">Format & size</th>
+                <td>
+                  {[asset.file_format?.toUpperCase(), asset.size_as_shown, asset.media_type].filter(Boolean).join(" · ")}
+                </td>
+              </tr>
+
+              <!-- Licence -->
+              <tr>
+                <th scope="row">Licence & access</th>
+                <td>
+                  <span>{fieldState(asset.access_tier)}</span> · <span>{assetLicence}</span>
+                  {asset.license_url && (
+                    <a class="table-link" href={asset.license_url} target="_blank" rel="noreferrer">Documentation ↗</a>
+                  )}
+                </td>
+              </tr>
+
+              <!-- Methodology / Heritage -->
+              <tr>
+                <th scope="row">Lineage & documentation</th>
+                <td>{methodStatus}</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- Collapsible PRISMA-ScR Audit Ledger -->
+        <section class="sheet-section audit-collapsible">
+          <details class="audit-details">
+            <summary class="audit-toggle">
+              <div class="audit-toggle-left">
+                <svg class="toggle-chevron" viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <span class="audit-title">Catalogue assessment and metadata evidence</span>
+              </div>
+              <span class={`status-pill ${review.needs_follow_up ? "status-pill--warn" : "status-pill--ok"}`}>
+                {review.needs_follow_up ? "Follow-up needed" : review.assessment?.eligibility_outcome === "included" ? "Included" : "Assessment recorded"}
+              </span>
+            </summary>
+
+            <div class="audit-content">
+              <p class="audit-description">
+                Completed catalogue decisions are recorded separately from technical inspection and scientific validation. Access and metadata evidence retain their original dates and scope.
+              </p>
+
+              <AssetReview review={review} />
+
+              {sources.length > 0 && (
+                <div class="audit-sources-list">
+                  <h3>Authoritative Metadata Sources</h3>
+                  <ul>
+                    {sources.map((url, i) => (
+                      <li><a href={url} target="_blank" rel="noreferrer">Source {i + 1}: {new URL(url).hostname}</a></li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </details>
+        </section>
+
+        <!-- Navigation Footer -->
+        <footer class="sheet-footer">
+          <a class="nav-back" href={withBase(`resources/${resource.resource_id}/`)}>
+            ← Back to parent resource: {resource.canonical_title}
+          </a>
+          <a class="nav-back" href={withBase("assets/")}>
+                    ← Browse all assets
+          </a>
+        </footer>
+      </main>
+
+    </div>
+  </div>
+
+  <MapExtentModal />
+</BaseLayout>}
+
+<style>
+  .asset-sheet {
+    background: #fbfbf9;
+    min-height: 80vh;
+    padding: 2rem 0 4rem;
+  }
+
+  .sheet-container {
+    max-width: 54rem;
+    margin: 0 auto;
+    padding: 0 1.25rem;
+  }
+
+  /* Breadcrumb */
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    margin-bottom: 1.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .breadcrumb a {
+    color: var(--teal-dark);
+    text-decoration: none;
+  }
+  .breadcrumb a:hover {
+    text-decoration: underline;
+  }
+  .breadcrumb-parent {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Sheet Header */
+  .sheet-header {
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-radius: 0.5rem;
+    padding: clamp(1.5rem, 3vw, 2.25rem);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    margin-bottom: 1.5rem;
+  }
+
+  .header-tags {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .domain-badge {
+    padding: 0.2rem 0.6rem;
+    border-radius: 0.25rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    border: 1px solid var(--rule);
+  }
+  .domain-badge--seismicity { background: #fdf2e9; border-color: #f8c499; color: #a04000; }
+  .domain-badge--terrain { background: #f5efe6; border-color: #d7c4b7; color: #6e473b; }
+  .domain-badge--cryosphere_source { background: #eaf4f4; border-color: #a8d5d5; color: #065452; }
+  .domain-badge--hydrology_flood { background: #e8f0fe; border-color: #aecbfa; color: #174ea6; }
+  .domain-badge--optical_eo { background: #fef7e0; border-color: #fdd663; color: #b06000; }
+  .domain-badge--radar_sar { background: #f3e8fd; border-color: #d7aefb; color: #7627bb; }
+  .domain-badge--infrastructure_impacts { background: #fce8e6; border-color: #f5b7b1; color: #c5221f; }
+  .domain-badge--reports_synthesis,
+  .domain-badge--preprints { background: #e6f4ea; border-color: #a8dab5; color: #137333; }
+  .domain-badge--reference_vector,
+  .domain-badge--general_evidence { background: #f1f3f4; border-color: #dadce0; color: #3c4043; }
+
+  .epoch-badge {
+    background: #f1f3f4;
+    color: #494c4e;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.2rem 0.55rem;
+    border-radius: 0.25rem;
+    border: 1px solid #dadce0;
+  }
+
+  .access-badge {
+    background: #e6f4ea;
+    color: #137333;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.2rem 0.55rem;
+    border-radius: 0.25rem;
+    border: 1px solid #ceead6;
+  }
+
+  .sheet-title {
+    font-size: clamp(1.65rem, 3.2vw, 2.25rem);
+    line-height: 1.2;
+    color: var(--ink);
+    margin: 0 0 0.6rem;
+    letter-spacing: -0.01em;
+  }
+
+  .sheet-original-title {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+    color: var(--ink-soft);
+    margin: 0 0 1rem;
+  }
+  .lang-tag {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    background: #eee;
+    padding: 0.1rem 0.4rem;
+    border-radius: 0.2rem;
+  }
+
+  .sheet-lead {
+    font-size: 1.05rem;
+    line-height: 1.6;
+    color: #2c3236;
+    margin: 0 0 1.5rem;
+    padding: 1rem 1.25rem;
+    background: #f7f9f9;
+    border-radius: 0.35rem;
+    border-left: 3px solid var(--teal);
+  }
+
+  /* Download Action Bar */
+  .sheet-download-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1.2rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--rule);
+  }
+
+  .download-btn {
+    background: var(--teal-dark);
+    color: #fff;
+    padding: 0.7rem 1.4rem;
+    font-size: 0.95rem;
+    font-weight: 650;
+    text-decoration: none;
+    border-radius: 0.3rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background 0.15s ease, transform 0.1s ease;
+  }
+  .download-btn:hover {
+    background: var(--teal);
+    color: #fff;
+  }
+  .download-btn svg {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+  .btn-arrow {
+    font-size: 1.1rem;
+    line-height: 1;
+  }
+
+  .download-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+  }
+  .download-meta code {
+    background: #f0f0ed;
+    padding: 0.1rem 0.35rem;
+    border-radius: 0.2rem;
+  }
+
+  /* Specifications Table */
+  .sheet-section {
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-radius: 0.5rem;
+    padding: clamp(1.25rem, 2.5vw, 2rem);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    margin-bottom: 1.5rem;
+  }
+
+  .sheet-section h2 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 0 0 1.2rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .spec-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.94rem;
+  }
+
+  .spec-table tr {
+    border-bottom: 1px solid #f0f0ed;
+  }
+  .spec-table tr:last-child {
+    border-bottom: none;
+  }
+
+  .spec-table th {
+    text-align: left;
+    vertical-align: top;
+    padding: 0.85rem 1rem 0.85rem 0;
+    width: 28%;
+    font-weight: 650;
+    color: var(--ink-soft);
+    font-size: 0.88rem;
+  }
+
+  .spec-table td {
+    padding: 0.85rem 0;
+    color: var(--ink);
+    line-height: 1.5;
+  }
+
+  .spec-table code {
+    background: #f0f0ed;
+    padding: 0.15rem 0.4rem;
+    border-radius: 0.2rem;
+    font-family: var(--mono);
+    font-size: 0.86rem;
+  }
+
+  .anatomy-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 0.4rem;
+  }
+  .pill {
+    display: inline-block;
+    background: #edf5f4;
+    color: var(--teal-dark);
+    padding: 0.2rem 0.55rem;
+    border-radius: 0.25rem;
+    font-size: 0.84rem;
+    border: 1px solid #d0e4e2;
+  }
+
+  .format-list {
+    margin: 0.4rem 0 0;
+    font-size: 0.84rem;
+    color: var(--ink-soft);
+  }
+
+  .table-note {
+    margin: 0.4rem 0 0;
+    font-size: 0.84rem;
+    color: var(--ink-soft);
+    font-style: italic;
+  }
+
+  .extent-cell {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem 1rem;
+  }
+  .coords-line code {
+    margin-right: 0.2rem;
+  }
+
+  .cell-sub {
+    display: block;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    margin-top: 0.2rem;
+  }
+
+  .table-link {
+    margin-left: 0.5rem;
+    color: var(--teal-dark);
+    text-decoration: underline;
+    font-size: 0.86rem;
+  }
+
+  /* PRISMA Audit Collapsible */
+  .audit-collapsible {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .audit-details {
+    width: 100%;
+  }
+
+  .audit-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    background: #f8f9f9;
+    list-style: none;
+    user-select: none;
+    transition: background 0.15s ease;
+  }
+  .audit-toggle::-webkit-details-marker {
+    display: none;
+  }
+  .audit-toggle:hover {
+    background: #f0f3f3;
+  }
+
+  .audit-toggle-left {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .toggle-chevron {
+    width: 0.85rem;
+    height: 0.85rem;
+    color: var(--ink-soft);
+    transition: transform 0.2s ease;
+  }
+  .audit-details[open] .toggle-chevron {
+    transform: rotate(90deg);
+  }
+
+  .audit-title {
+    font-size: 0.92rem;
+    font-weight: 650;
+    color: var(--ink);
+  }
+
+  .status-pill {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .status-pill--ok {
+    background: #e6f4ea;
+    color: #137333;
+  }
+  .status-pill--warn {
+    background: #fef7e0;
+    color: #b06000;
+  }
+
+  .audit-content {
+    padding: 1.25rem;
+    border-top: 1px solid var(--rule);
+    background: #fff;
+  }
+
+  .audit-description {
+    font-size: 0.86rem;
+    color: var(--ink-soft);
+    margin: 0 0 1.25rem;
+    line-height: 1.5;
+  }
+
+  .audit-sources-list {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+  }
+  .audit-sources-list h3 {
+    font-size: 0.88rem;
+    margin: 0 0 0.5rem;
+  }
+  .audit-sources-list ul {
+    margin: 0;
+    padding-left: 1.2rem;
+    font-size: 0.84rem;
+  }
+
+  /* Sheet Footer */
+  .sheet-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 2rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--rule);
+  }
+
+  .nav-back {
+    color: var(--teal-dark);
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .nav-back:hover {
+    text-decoration: underline;
+  }
+
+  @media (max-width: 48rem) {
+    .spec-table th {
+      width: 35%;
+      font-size: 0.82rem;
+    }
+    .spec-table td {
+      font-size: 0.88rem;
+    }
+    .sheet-title {
+      font-size: 1.5rem;
+    }
+    .sheet-download-bar {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.8rem;
+    }
+  }
+</style>

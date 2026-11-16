@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+message: "Please cite the catalogue using its Zenodo DOI."
+title: "Public Data Resources for the 26 August 2026 Nepal Hazard Cascade"
+type: dataset
+authors:
+  - family-names: Liaskos
+    given-names: Alexandros
+    affiliation: "National and Kapodistrian University of Athens"
+  - family-names: Evelpidou
+    given-names: Niki
+    affiliation: "National and Kapodistrian University of Athens"
+    email: evelpidou@geol.uoa.gr
+  - family-names: Spyrou
+    given-names: Evangelos
+    affiliation: "National and Kapodistrian University of Athens"
+  - family-names: Khadka
+    given-names: Nitesh
+    affiliation: "Tribhuvan University"
+date-released: 2026-09-29
+version: "2026-09-28"
+doi: "10.5281/zenodo.23034746"
+url: "https://evelpidou.nkua.cloud/Nepal-Flood-2026-Catalogue/"
+license: CC-BY-4.0
+abstract: "A living catalogue of pre-event baselines, event observations and subsequent analyses to support further research on the 26 August 2026 Nepal glacier-related hazard cascade."
+keywords:
+  - Nepal
+  - Xizang
+  - glacier-related hazard
+  - cascading hazards
+  - debris flow
+  - flood
+  - living scoping review
+  - public data

@@ -1,0 +1,525 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import FilterSelect from "../../components/FilterSelect.astro";
+import { getPublicData } from "../../lib/data";
+import { humanize, splitValues, withBase } from "../../lib/format";
+
+const { resources, candidates } = await getPublicData();
+const unique = (values: (string | null)[]) => {
+  const normalized = new Map<string, string>();
+  for (const value of values) {
+    const label = value?.trim();
+    if (label && !normalized.has(label.toLocaleLowerCase("en"))) {
+      normalized.set(label.toLocaleLowerCase("en"), label);
+    }
+  }
+  return [...normalized.values()].sort((a, b) => a.localeCompare(b));
+};
+const resourceCount = resources.length + candidates.length;
+const providers = unique([...resources.map((item) => item.provider), ...candidates.map((item) => item.source_name)]);
+const themes = unique(resources.flatMap((item) => splitValues(item.thematic_categories)));
+const resourceTypes = unique([...resources.map((item) => item.resource_type), ...candidates.map((item) => item.record_type)]);
+const evidenceClasses = unique(resources.map((item) => item.evidence_class));
+const temporalRoles = unique(resources.map((item) => item.temporal_role));
+const languages = unique([...resources.map((item) => item.language), ...candidates.map((item) => item.original_language)]);
+const languageNames = new Intl.DisplayNames(["en"], { type: "language" });
+const description = "Included resources in the completed assessed release of the living scoping review of the 26 August 2026 Nepal hazard cascade.";
+---
+
+<BaseLayout title="Resources" description={description}>
+  <header class="page-head page-head--compact resource-head">
+    <div class="container resource-container">
+      <h1>Resources</h1>
+      <p class="resource-totals" aria-label="Resource totals">
+        <span>{resourceCount} {resourceCount === 1 ? "resource" : "resources"}</span>
+        <span>{resources.length} included</span>
+        {candidates.length > 0 && <span>{candidates.length} under review</span>}
+      </p>
+    </div>
+  </header>
+
+  <main class="resource-index">
+    <div class="container resource-container">
+      {resourceCount === 0 ? (
+        <p>No resources are currently listed.</p>
+      ) : (
+        <>
+          <form class="resource-filters" id="resource-filters" aria-label="Filter resources">
+            <!-- Review Status Switcher -->
+            {candidates.length > 0 && <div class="tier-switcher" role="radiogroup" aria-label="Resource review status">
+              <label class="tier-option tier-option--active">
+                <input type="radio" name="status" value="" checked />
+                <span class="tier-label">All Resources <span class="tier-count">({resourceCount})</span></span>
+              </label>
+              <label class="tier-option">
+                <input type="radio" name="status" value="included" />
+                <span class="tier-label">Included <span class="tier-count">({resources.length})</span></span>
+              </label>
+              <label class="tier-option">
+                <input type="radio" name="status" value="under-review" />
+                <span class="tier-label">Under Review <span class="tier-count">({candidates.length})</span></span>
+              </label>
+            </div>}
+
+            <div class="resource-filter-grid">
+              <div class="field--search">
+                <label for="resource-query">Title or text</label>
+                <input id="resource-query" name="q" type="search" placeholder="Search resources" autocomplete="off" />
+              </div>
+              <FilterSelect
+                id="provider-filter"
+                name="provider"
+                label="Provider"
+                options={[{ value: "", label: "All providers" }, ...providers.map((item) => ({ value: item, label: item }))]}
+              />
+              <FilterSelect
+                id="type-filter"
+                name="type"
+                label="Resource type"
+                options={[{ value: "", label: "All types" }, ...resourceTypes.map((item) => ({ value: item, label: humanize(item) }))]}
+              />
+              {themes.length > 0 && (
+                <FilterSelect
+                  id="theme-filter"
+                  name="theme"
+                  label="Theme"
+                  options={[{ value: "", label: "All themes" }, ...themes.map((item) => ({ value: item, label: humanize(item) }))]}
+                />
+              )}
+              {evidenceClasses.length > 0 && (
+                <FilterSelect
+                  id="evidence-filter"
+                  name="evidence"
+                  label="Evidence class"
+                  options={[{ value: "", label: "All evidence classes" }, ...evidenceClasses.map((item) => ({ value: item, label: humanize(item) }))]}
+                />
+              )}
+              {temporalRoles.length > 0 && (
+                <FilterSelect
+                  id="temporal-filter"
+                  name="temporal"
+                  label="Temporal role"
+                  options={[{ value: "", label: "All temporal roles" }, ...temporalRoles.map((item) => ({ value: item, label: humanize(item) }))]}
+                />
+              )}
+              {languages.length > 1 && (
+                <FilterSelect
+                  id="language-filter"
+                  name="language"
+                  label="Language"
+                  options={[{ value: "", label: "All languages" }, ...languages.map((item) => ({ value: item, label: languageNames.of(item) ?? item }))]}
+                />
+              )}
+            </div>
+            <div class="filter-footer">
+              <p id="resource-result-count" aria-live="polite">{resourceCount} {resourceCount === 1 ? "resource" : "resources"}</p>
+              <button class="button--quiet" type="reset">Clear filters</button>
+            </div>
+          </form>
+
+          <div class="table-wrap" id="resource-table-wrap" data-mobile-table-wrap>
+            <table class="resource-table" data-mobile-table>
+              <caption class="visually-hidden">Catalogue resources</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Resource</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Provider</th>
+                  <th scope="col">Classification</th>
+                  <th scope="col">Temporal role</th>
+                  <th scope="col">Theme</th>
+                </tr>
+              </thead>
+              <tbody>
+                {resources.map((resource) => (
+                  <tr
+                    data-resource-row
+                    data-search={`${resource.canonical_title} ${resource.description} ${resource.provider}`.toLowerCase()}
+                    data-status="included"
+                    data-provider={resource.provider}
+                    data-theme={resource.thematic_categories}
+                    data-type={resource.resource_type}
+                    data-evidence={resource.evidence_class}
+                    data-temporal={resource.temporal_role}
+                    data-language={resource.language}
+                  >
+                    <th scope="row"><a class="resource-title-link" href={withBase(`resources/${resource.resource_id}/`)}>{resource.canonical_title}</a></th>
+                    <td data-label="Status">
+                      <span class="status-badge status-badge--reviewed">Included</span>
+                    </td>
+                    <td data-label="Provider">{resource.provider}</td>
+                    <td data-label="Classification">
+                      <span>{humanize(resource.resource_type)}</span>
+                      <span class="resource-secondary">{humanize(resource.evidence_class)}</span>
+                    </td>
+                    <td data-label="Temporal role">{resource.temporal_role ? humanize(resource.temporal_role) : "Not stated"}</td>
+                    <td data-label="Theme">{splitValues(resource.thematic_categories).map(humanize).join(", ") || "Not stated"}</td>
+                  </tr>
+                ))}
+                {candidates.map((candidate) => (
+                  <tr
+                    data-resource-row
+                    data-search={`${candidate.display_title} ${candidate.description} ${candidate.source_name}`.toLowerCase()}
+                    data-status="under-review"
+                    data-provider={candidate.source_name}
+                    data-theme=""
+                    data-type={candidate.record_type}
+                    data-evidence=""
+                    data-temporal=""
+                    data-language={candidate.original_language}
+                  >
+                    <th scope="row"><a class="resource-title-link" href={withBase(`under-review/${candidate.record_id}/`)}>{candidate.display_title}</a></th>
+                    <td data-label="Status">
+                      <span class="status-badge">Under review</span>
+                    </td>
+                    <td data-label="Provider">{candidate.source_name}</td>
+                    <td data-label="Classification">
+                      <span>{humanize(candidate.record_type)}</span>
+                      <span class="resource-secondary">{candidate.asset_count} listed assets</span>
+                    </td>
+                    <td data-label="Temporal role">—</td>
+                    <td data-label="Theme">—</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p class="resource-empty" id="resource-empty" hidden>No resources match these filters.</p>
+        </>
+      )}
+    </div>
+  </main>
+
+  <script>
+    const form = document.querySelector<HTMLFormElement>("#resource-filters");
+    const rows = [...document.querySelectorAll<HTMLTableRowElement>("[data-resource-row]")];
+    const count = document.querySelector<HTMLElement>("#resource-result-count");
+    const empty = document.querySelector<HTMLElement>("#resource-empty");
+    const table = document.querySelector<HTMLElement>("#resource-table-wrap");
+    const statusOptions = [...document.querySelectorAll<HTMLLabelElement>(".tier-option")];
+    const statusInputs = [...document.querySelectorAll<HTMLInputElement>('input[name="status"]')];
+
+    if (form && rows.length) {
+      const controls = [...form.elements].filter((element): element is HTMLInputElement | HTMLSelectElement =>
+        (element instanceof HTMLInputElement && element.name !== "status") || element instanceof HTMLSelectElement
+      );
+      const params = new URLSearchParams(location.search);
+      for (const control of controls) {
+        if (control.name && params.has(control.name)) control.value = params.get(control.name) ?? "";
+      }
+
+      if (params.has("status")) {
+        const statusParam = params.get("status")!;
+        const targetRadio = statusInputs.find((r) => r.value === statusParam);
+        if (targetRadio) targetRadio.checked = true;
+      }
+
+      const updateStatusClasses = () => {
+        for (const label of statusOptions) {
+          const input = label.querySelector<HTMLInputElement>("input");
+          if (input?.checked) {
+            label.classList.add("tier-option--active");
+          } else {
+            label.classList.remove("tier-option--active");
+          }
+        }
+      };
+
+      const apply = () => {
+        updateStatusClasses();
+        const selectedStatus = statusInputs.find((r) => r.checked)?.value || "";
+
+        const rawValues = Object.fromEntries(
+          controls.filter((control) => control.name).map((control) => [control.name, control.value.trim()])
+        );
+        const values = Object.fromEntries(Object.entries(rawValues).map(([key, value]) => [key, value.toLowerCase()]));
+        let visible = 0;
+
+        for (const row of rows) {
+          const matches = (!selectedStatus || row.dataset.status === selectedStatus)
+            && (!values.q || row.dataset.search?.includes(values.q))
+            && (!values.provider || row.dataset.provider?.toLowerCase() === values.provider)
+            && (!values.theme || row.dataset.theme?.toLowerCase().split(/\s*[|;]\s*/).includes(values.theme))
+            && (!values.type || row.dataset.type?.toLowerCase() === values.type)
+            && (!values.evidence || row.dataset.evidence?.toLowerCase() === values.evidence)
+            && (!values.temporal || row.dataset.temporal?.toLowerCase() === values.temporal)
+            && (!values.language || row.dataset.language?.toLowerCase() === values.language);
+          row.hidden = !matches;
+          if (matches) visible += 1;
+        }
+
+        if (count) count.textContent = `${visible} ${visible === 1 ? "resource" : "resources"}`;
+        if (empty) empty.hidden = visible !== 0;
+        if (table) table.hidden = visible === 0;
+
+        const next = new URLSearchParams();
+        if (selectedStatus) next.set("status", selectedStatus);
+        for (const [key, value] of Object.entries(rawValues)) if (value) next.set(key, value);
+        const query = next.toString();
+        history.replaceState(null, "", `${location.pathname}${query ? `?${query}` : ""}`);
+      };
+
+      form.addEventListener("input", apply);
+      form.addEventListener("change", apply);
+      form.addEventListener("reset", () => {
+        if (statusInputs[0]) statusInputs[0].checked = true;
+        requestAnimationFrame(apply);
+      });
+      apply();
+    }
+  </script>
+
+  <style>
+    .resource-head {
+      padding-bottom: clamp(2.2rem, 4vw, 3.1rem);
+    }
+
+    .resource-container {
+      max-width: 74rem;
+    }
+
+    .resource-totals {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem 1rem;
+      margin: 0.75rem 0 0;
+      color: var(--ink-soft);
+      font-size: 0.88rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .resource-index {
+      padding-block: 0 clamp(4rem, 8vw, 6rem);
+    }
+
+    .resource-filters {
+      margin-bottom: 1.8rem;
+    }
+
+    /* Segmented Status Switcher */
+    .tier-switcher {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-bottom: 1.2rem;
+      background: var(--surface-muted);
+      border: 1px solid var(--rule);
+      border-radius: 0.25rem;
+      padding: 0.3rem;
+    }
+
+    .tier-option {
+      display: inline-flex;
+      align-items: center;
+      cursor: pointer;
+      border-radius: 0.2rem;
+      padding: 0.4rem 0.85rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--ink-soft);
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .tier-option input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .tier-option--active {
+      background: var(--teal-dark);
+      color: #fff;
+      font-weight: 650;
+    }
+
+    .tier-count {
+      opacity: 0.85;
+      font-size: 0.8rem;
+      margin-left: 0.25rem;
+    }
+
+    .resource-filter-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.65rem 0.75rem;
+    }
+
+    .resource-filter-grid > div {
+      min-width: 0;
+    }
+
+    .field--search {
+      grid-column: span 2;
+    }
+
+    .resource-filter-grid input {
+      display: block;
+      min-width: 0;
+      max-width: 100%;
+      min-height: 2.42rem;
+      padding: 0.38rem 0.55rem;
+      font-size: 0.88rem;
+    }
+
+    .filter-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-top: 0.65rem;
+    }
+
+    .filter-footer p {
+      margin: 0;
+      color: var(--ink-soft);
+      font-size: 0.86rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .filter-footer button {
+      min-height: 2.2rem;
+      padding: 0.35rem 0.68rem;
+      font-size: 0.84rem;
+    }
+
+    .table-wrap {
+      overflow: visible;
+    }
+
+    .resource-table {
+      width: 100%;
+      min-width: 0;
+      border-collapse: collapse;
+      table-layout: fixed;
+      text-align: left;
+    }
+
+    .resource-table th,
+    .resource-table td {
+      border-bottom: 1px solid var(--rule);
+      padding: 0.95rem 1rem 0.95rem 0;
+      vertical-align: top;
+      overflow-wrap: anywhere;
+    }
+
+    .resource-table thead th {
+      border-bottom-color: var(--rule-strong);
+      color: var(--ink-soft);
+      font-family: var(--sans);
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.045em;
+      text-transform: uppercase;
+    }
+
+    .resource-table tbody th {
+      width: 30%;
+      font-family: var(--sans);
+      font-size: 0.94rem;
+      font-weight: 400;
+      line-height: 1.45;
+    }
+
+    .resource-table tbody td {
+      color: var(--ink-soft);
+      font-size: 0.86rem;
+      line-height: 1.42;
+    }
+
+    .resource-table tbody td:nth-child(2) {
+      width: 13%;
+    }
+
+    .resource-table tbody td:nth-child(3) {
+      width: 18%;
+    }
+
+    .resource-table tbody td:nth-child(4) {
+      width: 15%;
+    }
+
+    .resource-table tbody td:nth-child(5) {
+      width: 12%;
+    }
+
+    .resource-table tbody td:nth-child(6) {
+      width: 12%;
+    }
+
+    .resource-table th:last-child,
+    .resource-table td:last-child {
+      padding-right: 0;
+    }
+
+    .resource-title-link {
+      color: var(--ink);
+      font-family: var(--serif);
+      font-size: 1.04rem;
+      font-weight: 600;
+      text-decoration-color: #9fb8b7;
+    }
+
+    .resource-secondary {
+      display: block;
+      margin-top: 0.22rem;
+      color: #74828a;
+      font-size: 0.82rem;
+    }
+
+    .resource-empty {
+      margin-top: 1.5rem;
+      color: var(--ink-soft);
+    }
+
+    @media (max-width: 68rem) {
+      .resource-filter-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 42rem), (pointer: coarse) {
+      .resource-filter-grid input {
+        min-height: 2.75rem;
+        padding-block: 0.5rem;
+        font-size: 1rem;
+      }
+
+      .filter-footer button {
+        min-height: 2.75rem;
+      }
+    }
+
+    @media (max-width: 42rem) {
+      .resource-head {
+        padding-block: 3rem 2.75rem;
+      }
+
+      .resource-index {
+        padding-bottom: 5rem;
+      }
+
+      .resource-filters {
+        margin-bottom: 2rem;
+      }
+
+      .resource-filter-grid {
+        grid-template-columns: 1fr;
+        gap: 1.05rem;
+      }
+
+      .field--search {
+        grid-column: auto;
+      }
+
+      .filter-footer {
+        align-items: flex-start;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+      }
+
+      .resource-table tbody th {
+        line-height: 1.38;
+      }
+    }
+  </style>
+</BaseLayout>

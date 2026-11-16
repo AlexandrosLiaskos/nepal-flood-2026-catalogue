@@ -1,0 +1,49 @@
+# Operating-system and editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+*.lock
+
+# Python runtime files
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
+# Website build files
+node_modules/
+.astro/
+dist/
+
+# Development-only product and design memory
+PRODUCT.md
+DESIGN.md
+.impeccable/
+
+# Secrets and private working material
+.env
+.env.*
+.private/
+private/
+data/private/
+searches/private/
+searches/cycles/*/private/
+searches/cycles/*/credentials*
+outputs/.build/
+
+# The PRISMA-ScR form is linked in the standards manifest because its
+# redistribution terms are not stated on the official download page.
+standards/upstream/PRISMA-ScR_Checklist_2019.pdf
+standards/upstream/PRISMA-ScR_Checklist_2019.docx
+
+# Not part of the public source repository (see README.md)
+/catalogue/*.csv
+/catalogue/*.json
+/catalogue/README.md
+/public/search-reports/
+/public/brand/
+/public/images/
+/public/favicon-nkua.png
+/public/social-preview.png
+/AGENTS.md

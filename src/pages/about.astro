@@ -1,0 +1,505 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { withBase } from "../lib/format";
+
+const articleTitle = "Public Data Resources for the 26 August 2026 Nepal Hazard Cascade: A Living Scoping Review and Data Catalogue";
+const description = "A living scoping review and data catalogue for the 26 August 2026 Nepal hazard cascade, with an assessed release archived on Zenodo and planned monthly updates.";
+---
+
+<BaseLayout title="About" description={description}>
+  <header class="page-head page-head--compact about-head">
+    <div class="container about-container">
+      <h1>About the catalogue</h1>
+      <p class="lede">A living scoping review and data catalogue connecting pre-event baselines, event observations and subsequent analyses to support research on the 26 August 2026 Nepal hazard cascade.</p>
+    </div>
+  </header>
+
+  <article class="about-page">
+    <div class="container about-container">
+      <section class="about-section" aria-labelledby="catalogue-heading">
+        <h2 id="catalogue-heading">What this catalogue is</h2>
+        <div class="prose-block">
+          <p>This living scoping review identifies publicly available data and information that can support future investigations of the 26 August 2026 hazard cascade. It connects pre-event baselines, event observations and subsequent analyses, helping researchers identify and access relevant material and build on previous discovery work.</p>
+          <p>This catalogue is the item-level public record created from that review. It brings dispersed resources into a consistent structure and describes their provider, provenance, geographic and temporal coverage, access conditions, licence information, production method where documented, limitations, uncertainties, and review status.</p>
+          <p>Planned maintenance combines monthly searches across all eight thematic domains and the source families covered by the review with additional checks prompted by community nominations or newly released or revised material. New resources undergo eligibility assessment, and dated releases document additions, corrections and decisions while preserving earlier inventories for citation and reuse. Completed, partial and unavailable searches are dated in the <a href={withBase("searches/")}>search register</a>, while the <a href={withBase("resources/")}>resources</a> and <a href={withBase("assets/")}>assets</a> indexes present the assessed inventory.</p>
+        </div>
+      </section>
+
+      <section class="about-section" aria-labelledby="coverage-heading">
+        <h2 id="coverage-heading">Catalogue coverage</h2>
+        <p class="section-introduction">The catalogue covers resources that can support investigation of the event, its causes and consequences, and the wider conditions relevant to hazard, exposure, and risk.</p>
+        <dl class="reading-list coverage-list">
+          <div class="coverage-block coverage-block--full">
+            <dt>Eight Thematic Information Domains</dt>
+            <dd>
+              <ol class="coverage-sublist">
+                <li><strong>Spaceborne Earth observation:</strong> Satellite imagery, scene metadata and derived emergency mapping products.</li>
+                <li><strong>Terrain, geomorphology, and cryosphere:</strong> Digital elevation models, glacier inventories, source-area observations and barrier-lake mapping.</li>
+                <li><strong>Hydrology, hydraulics, and meteorology:</strong> Hydrometric observations, official flood reports, climate archives and mixture-flow modelling resources.</li>
+                <li><strong>Geophysics, geotechnical baselines, and soil properties:</strong> Seismological waveform recordings, earthquake catalog extracts, structural geology vectors, lithological map sheets, and soil hydraulic property rasters.</li>
+                <li><strong>Land cover and environmental baselines:</strong> High-resolution global land cover maps, vegetation cover classifications, and hydrographic network vectors.</li>
+                <li><strong>Exposure, infrastructure, and built environment:</strong> Building footprints, interpreted or automated damage classifications, transport networks, road blockage reports and hydropower information.</li>
+                <li><strong>Post-event scientific literature and forensic analyses:</strong> Scholarly preprints, peer-reviewed research articles, institutional technical reports, rapid hazard assessments, and competing event hypothesis analyses.</li>
+                <li><strong>Humanitarian crisis reporting and civil protection:</strong> Multi-agency cluster situation updates across water sanitation, shelter, health, and displacement, emergency mapping delineations, and government disaster bulletins.</li>
+              </ol>
+            </dd>
+          </div>
+          <div class="coverage-block coverage-block--full">
+            <dt>Seven Technical Asset Modalities</dt>
+            <dd>
+              <ol class="coverage-sublist">
+                <li><strong>Geospatial rasters and gridded arrays:</strong> Cloud-Optimized GeoTIFFs (COG), NetCDF-4 multidimensional grids, and surface rasters.</li>
+                <li><strong>Vector geodatabases and feature layers:</strong> GeoPackage (.gpkg), Shapefile, GeoJSON, and KML vector feature layers.</li>
+                <li><strong>Hydrometric and meteorological time series tables:</strong> Standardized CSV tabular records and gauge series spreadsheets.</li>
+                <li><strong>In situ field surveys, ground photographs, and damage inspection archives:</strong> Ground reconnaissance imagery, engineering damage inspections, and field surveys.</li>
+                <li><strong>Cloud-native geospatial services, vector tile feeds, and STAC metadata manifests:</strong> SpatioTemporal Asset Catalog (STAC) metadata endpoints, vector tile services, and WMS/WFS feeds.</li>
+                <li><strong>Data-bearing documents and forensic publications:</strong> Peer-reviewed research articles, institutional technical reports, and scholarly preprints.</li>
+                <li><strong>Reproducible computational workflows and simulation code:</strong> Python algorithms, hydrodynamic simulation workflows, and code repositories.</li>
+              </ol>
+            </dd>
+          </div>
+          <div>
+            <dt>Providers</dt>
+            <dd>National and local authorities; scientific and technical agencies; universities and research institutes; international and humanitarian organizations; satellite archives; research and geospatial repositories; mapping services; and project websites.</dd>
+          </div>
+          <div>
+            <dt>Place and time</dt>
+            <dd>The northern flank of Langtang Lirung, the China–Nepal border corridor, and the Bhote Koshi–Trishuli system to the Narayani at Devghat, across pre-event baseline, event, and post-event periods.</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="about-section article-section" aria-labelledby="article-heading">
+        <h2 id="article-heading">Associated manuscript</h2>
+        <div class="prose-block">
+          <p>The catalogue is the public companion to the living scoping review manuscript:</p>
+          <p class="article-title"><a href={withBase("review-article/")}><cite>{articleTitle}</cite></a></p>
+          <p>The manuscript describes 74 documented searches through 24 September 2026 and the first assessed release completed on 28 September, containing 141 resources and 5,883 assets across eight thematic domains. This catalogue provides the item-level resource inventory, while the <a href="https://evelpidou.nkua.cloud/Nepal-Flood-2026/">interactive WebGIS</a> presents the spatially enabled subset.</p>
+          <p>The online indexes present 141 included resources and 5,883 assets from the assessment completed on 28 September 2026, based on searches through 24 September. The <a href={withBase("assessment/")}>complete assessment and exclusion ledger</a> retains decisions, reasons, source evidence and metadata corrections. The assessed release, search and assessment records, documentation and supporting analyses are archived on Zenodo at <a href="https://doi.org/10.5281/zenodo.23034746">doi:10.5281/zenodo.23034746</a>.</p>
+        </div>
+      </section>
+
+      <section class="about-section" aria-labelledby="process-heading">
+        <h2 id="process-heading">How the catalogue is built</h2>
+        <ol class="process-list">
+          <li>
+            <span class="process-number" aria-hidden="true">1</span>
+            <div>
+              <h3>Search</h3>
+              <p>Each search is designed for a defined source and purpose. Its interface, strategy, criteria, coverage, date, and results are documented in the public search register.</p>
+            </div>
+          </li>
+          <li>
+            <span class="process-number" aria-hidden="true">2</span>
+            <div>
+              <h3>Assess</h3>
+              <p>Each record is assessed against the predefined eligibility criteria. Until that assessment is complete, it remains under review.</p>
+            </div>
+          </li>
+          <li>
+            <span class="process-number" aria-hidden="true">3</span>
+            <div>
+              <h3>Review</h3>
+              <p>Eligibility decisions, supporting source evidence and metadata corrections are recorded for subsequent author review and reassessment.</p>
+            </div>
+          </li>
+          <li>
+            <span class="process-number" aria-hidden="true">4</span>
+            <div>
+              <h3>Describe</h3>
+              <p>For an eligible resource, information is charted from authoritative sources and organized into consistent fields covering identity, provenance, coverage, access, licensing, methods, validation, uncertainty, and limitations.</p>
+            </div>
+          </li>
+          <li>
+            <span class="process-number" aria-hidden="true">5</span>
+            <div>
+              <h3>Inventory assets</h3>
+              <p>Files, layers, satellite scenes, and service endpoints belonging to a record or resource are listed as assets. Assets remain attached to their parent entry and are not counted as separate resources.</p>
+            </div>
+          </li>
+          <li>
+            <span class="process-number" aria-hidden="true">6</span>
+            <div>
+              <h3>Update</h3>
+              <p>Later searches identify new or changed material. Entries are added, corrected, superseded, or otherwise updated while their status remains explicit.</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <section class="about-section" aria-labelledby="standards-heading">
+        <h2 id="standards-heading">Review method and reporting standards</h2>
+        <div class="prose-block standards-introduction">
+          <p><a href="https://www.prisma-statement.org/">PRISMA</a> stands for <em>Preferred Reporting Items for Systematic Reviews and Meta-Analyses</em>. It is a family of reporting guidelines: it specifies what a review should report clearly and transparently, but it does not replace the method used to conduct the review.</p>
+          <p>The search and charting process is reported in accordance with PRISMA-ScR. Source-specific searches and separate resource and asset decisions document provenance, access conditions, rights, corrections and limitations.</p>
+        </div>
+        <dl class="standards-list">
+          
+          <div>
+            <dt><a href="https://www.prisma-statement.org/scoping">PRISMA-ScR</a></dt>
+            <dd>The PRISMA extension for scoping reviews. It guides reporting of the review question, eligibility, information sources, selection, charting, results, limitations, and conclusions.</dd>
+          </div>
+          
+          
+          
+        </dl>
+      </section>
+
+      <section class="about-section" aria-labelledby="entries-heading">
+        <h2 id="entries-heading">How to read catalogue entries</h2>
+        <dl class="reading-list">
+          <div>
+            <dt>Record</dt>
+            <dd>An item identified through a documented search. A record remains under review until its eligibility and required information have been assessed.</dd>
+          </div>
+          <div>
+            <dt>Resource</dt>
+            <dd>An eligible dataset, report, service, codebase, or other data-bearing item represented once in the catalogue, even when several records point to it.</dd>
+          </div>
+          <div>
+            <dt>Asset</dt>
+            <dd>A concrete technical data file, raster grid, vector layer, time series table, in situ survey archive, cloud service endpoint, document, or code repository belonging to one of the seven technical asset modalities. It is attached to its parent resource or candidate record.</dd>
+          </div>
+          <div>
+            <dt>Included</dt>
+            <dd>The resource has completed catalogue eligibility assessment and is retained in the assessed inventory. Inclusion does not independently validate its scientific content or establish permission to redistribute third-party material.</dd>
+          </div>
+          <div>
+            <dt>Under review</dt>
+            <dd>The item has been identified, but its eligibility or required information is still being assessed.</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="about-section eligibility-section" aria-labelledby="eligibility-heading">
+        <h2 id="eligibility-heading">Eligibility</h2>
+        <p class="section-introduction">Resources are assessed against criteria defined for the living scoping review.</p>
+        <div class="eligibility-grid">
+          <section aria-labelledby="eligible-heading">
+            <h3 id="eligible-heading">Eligible</h3>
+            <ul>
+              <li>Data assets spanning any of the seven technical asset modalities across the eight thematic information domains (including satellite rasters, vector layers, hydrometric telemetry, damage surveys, cloud-native services, forensic publications, and reproducible simulation code).</li>
+              <li>Resources that inform documentation, investigation, exposure, risk or response within the review scope, including relevant regional and global baselines.</li>
+              <li>Resources available without charge through direct access, free registration, or a transparent no-cost request route.</li>
+              <li>Resources in any language.</li>
+            </ul>
+          </section>
+          <section aria-labelledby="ineligible-heading">
+            <h3 id="ineligible-heading">Not eligible</h3>
+            <ul>
+              <li>Paid or private holdings and resources with an opaque access process.</li>
+              <li>Resources with no demonstrable connection to the review scope.</li>
+              <li>Commentary or duplicate news coverage containing no unique data.</li>
+            </ul>
+          </section>
+        </div>
+      </section>
+
+      <section class="about-section" aria-labelledby="classification-heading">
+        <h2 id="classification-heading">Evidence classification</h2>
+        <p class="section-introduction">Each reviewed resource is classified by the kind of evidence it provides.</p>
+        <dl class="classification-list">
+          <div><dt>Observed</dt><dd>Measurements, field observations, instrument records, or source imagery.</dd></div>
+          <div><dt>Interpreted</dt><dd>Human-interpreted mapping, classification, or analysis derived from observations.</dd></div>
+          <div><dt>Automated</dt><dd>Outputs produced principally through automated detection or classification.</dd></div>
+          <div><dt>Modelled</dt><dd>Simulations, estimates, forecasts, or model-based reconstructions.</dd></div>
+          <div><dt>Baseline</dt><dd>Pre-event or contextual physical and environmental conditions.</dd></div>
+          <div><dt>Exposure</dt><dd>Population, infrastructure, land use, services, or other elements potentially affected.</dd></div>
+          <div><dt>Mixed</dt><dd>A resource containing more than one evidence class.</dd></div>
+        </dl>
+      </section>
+
+      <section class="about-section solidarity-section" aria-labelledby="solidarity-heading">
+        <h2 id="solidarity-heading">With respect and solidarity</h2>
+        <div class="prose-block">
+          <p>We extend our deepest sympathy to the people and communities affected by the 26 August 2026 disaster, especially to those who lost family members and loved ones, sustained injuries, were displaced, or suffered the loss of homes, livelihoods, infrastructure, and cultural or natural heritage. We stand in solidarity with the people of Nepal and the Tibet Autonomous Region of China, and with every community across the affected region.</p>
+          <p>This research is offered in the hope that it can strengthen scientific understanding, risk awareness, preparedness, and future efforts to prevent or mitigate such hazards and catastrophes.</p>
+        </div>
+      </section>
+
+      <section class="about-section authors-section" aria-labelledby="authors-heading">
+        <h2 id="authors-heading">Authors and affiliations</h2>
+        <p class="author-line">
+          <a href="mailto:alexliaskos@geol.uoa.gr">Alexandros Liaskos</a><sup>1</sup>,{" "}
+          <a href="mailto:evelpidou@geol.uoa.gr">Niki Evelpidou</a><sup>1</sup>,{" "}
+          <a href="mailto:evspyrou@geol.uoa.gr">Evangelos Spyrou</a><sup>1</sup>, and
+          <a href="mailto:niteshkhadka48@gmail.com">Nitesh Khadka</a><sup>2</sup>
+        </p>
+        <ol class="affiliation-list">
+          <li><sup>1</sup> <a href="https://en.uoa.gr/">National and Kapodistrian University of Athens</a>, University Campus, 15784 Athens, Greece</li>
+          <li><sup>2</sup> <a href="https://tu.edu.np/">Tribhuvan University</a>, Kathmandu 44600, Nepal</li>
+        </ol>
+      </section>
+    </div>
+  </article>
+</BaseLayout>
+
+<style>
+  .about-head {
+    padding-bottom: clamp(2.5rem, 5vw, 3.75rem);
+  }
+
+  .about-container {
+    max-width: 68rem;
+  }
+
+  .about-head .lede {
+    max-width: 70ch;
+    font-size: 1rem;
+    line-height: 1.62;
+  }
+
+  .about-page {
+    padding-bottom: clamp(4rem, 8vw, 6rem);
+  }
+
+  .about-section {
+    padding-block: clamp(2rem, 4.5vw, 3.6rem);
+  }
+
+  .about-section:first-child {
+    padding-top: 0;
+  }
+
+  .about-section > h2 {
+    max-width: 28ch;
+    margin: 0 0 1.15rem;
+    font-size: clamp(1.55rem, 2.4vw, 2rem);
+  }
+
+  .prose-block,
+  .section-introduction,
+  .method-note,
+  .field-note {
+    max-width: 70ch;
+  }
+
+  .prose-block > :last-child,
+  .about-section > :last-child {
+    margin-bottom: 0;
+  }
+
+  .article-section {
+    padding-block: clamp(2.35rem, 5vw, 4rem);
+  }
+
+  .article-title {
+    max-width: 62ch;
+    margin: 1.15rem 0;
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: clamp(1.15rem, 2vw, 1.42rem);
+    line-height: 1.48;
+  }
+
+  .method-note,
+  .field-note,
+  .section-introduction {
+    color: var(--ink-soft);
+  }
+
+  .process-list {
+    max-width: 70ch;
+    margin: 1.6rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .process-list li {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr);
+    gap: 0.85rem;
+  }
+
+  .process-list li + li {
+    margin-top: 1.45rem;
+  }
+
+  .process-number {
+    color: var(--teal-dark);
+    font-family: var(--serif);
+    font-size: 1.15rem;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.35;
+  }
+
+  .process-list h3,
+  .eligibility-grid h3 {
+    margin: 0 0 0.35rem;
+    font-family: var(--sans);
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .process-list p {
+    margin: 0;
+    color: var(--ink-soft);
+  }
+
+  .standards-introduction {
+    margin-bottom: 1.75rem;
+  }
+
+  .standards-list {
+    max-width: 64rem;
+    margin: 0;
+    border-top: 1px solid var(--rule-strong);
+  }
+
+  .standards-list > div {
+    display: grid;
+    grid-template-columns: minmax(9rem, 0.24fr) minmax(0, 1fr);
+    gap: 1.5rem;
+    border-bottom: 1px solid var(--rule);
+    padding-block: 0.95rem;
+  }
+
+  .standards-list dt {
+    font-weight: 700;
+  }
+
+  .standards-list dd {
+    margin: 0;
+    color: var(--ink-soft);
+  }
+
+  .method-note,
+  .field-note {
+    margin-top: 1.35rem;
+  }
+
+  .reading-list,
+  .classification-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.35rem 3rem;
+    max-width: 64rem;
+    margin: 1.5rem 0 0;
+  }
+
+  .reading-list div,
+  .classification-list div {
+    min-width: 0;
+  }
+
+  .reading-list dt,
+  .classification-list dt {
+    color: var(--ink);
+    font-weight: 700;
+  }
+
+  .reading-list dd,
+  .classification-list dd {
+    margin: 0.25rem 0 0;
+    color: var(--ink-soft);
+  }
+
+  .coverage-block--full {
+    grid-column: 1 / -1;
+  }
+
+  .coverage-sublist {
+    margin: 0.6rem 0 0;
+    padding-left: 1.25rem;
+    color: var(--ink-soft);
+    display: grid;
+    gap: 0.55rem;
+  }
+
+  .coverage-sublist li strong {
+    color: var(--ink);
+    font-weight: 650;
+  }
+
+  .eligibility-section {
+    margin-top: clamp(1.5rem, 3vw, 2.5rem);
+  }
+
+  .eligibility-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(2rem, 5vw, 4.5rem);
+    max-width: 64rem;
+    margin-top: 1.6rem;
+  }
+
+  .eligibility-grid ul {
+    margin: 0;
+    padding-left: 1.15rem;
+  }
+
+  .eligibility-grid li + li {
+    margin-top: 0.55rem;
+  }
+
+  .authors-section {
+    padding-top: clamp(3rem, 6vw, 5rem);
+  }
+
+  .author-line {
+    max-width: 72ch;
+    margin: 0;
+    color: var(--ink);
+    font-size: 1.03rem;
+    line-height: 1.7;
+  }
+
+  .author-line a {
+    color: inherit;
+    font-weight: 600;
+    text-decoration-color: #9fb8b7;
+  }
+
+  .author-line sup,
+  .affiliation-list sup {
+    margin-left: 0.08em;
+    font-size: 0.7em;
+    line-height: 0;
+    vertical-align: super;
+  }
+
+  .affiliation-list {
+    max-width: 78ch;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+    line-height: 1.55;
+    list-style: none;
+  }
+
+  .affiliation-list li + li {
+    margin-top: 0.3rem;
+  }
+
+  @media (max-width: 46rem) {
+    .about-head {
+      padding-block: 3rem 2.75rem;
+    }
+
+    .about-section {
+      padding-block: 3rem;
+    }
+
+    .standards-list > div,
+    .reading-list,
+    .classification-list,
+    .eligibility-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .standards-list > div {
+      gap: 0.4rem;
+      padding-block: 1.2rem;
+    }
+
+    .reading-list,
+    .classification-list {
+      gap: 1.5rem;
+    }
+
+    .authors-section {
+      padding-top: 3.5rem;
+    }
+  }
+</style>

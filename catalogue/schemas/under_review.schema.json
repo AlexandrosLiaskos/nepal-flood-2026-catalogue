@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://evelpidou.geo.nkua.cloud/Nepal-Flood-2026-Catalogue/data/schemas/under_review.schema.json",
+  "title": "Public records under review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status_as_of",
+    "scope",
+    "notice",
+    "candidate_record_count",
+    "candidate_asset_count",
+    "candidates"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "2.0.0"
+    },
+    "notice": {
+      "type": "string",
+      "minLength": 1
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "record_id",
+          "display_title",
+          "landing_url",
+          "review_status",
+          "assets"
+        ],
+        "properties": {
+          "record_id": {
+            "type": "string",
+            "pattern": "^rec_[0-9a-f-]{36}$"
+          },
+          "display_title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "landing_url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "review_status": {
+            "const": "under_review"
+          },
+          "assets": {
+            "type": "array"
+          }
+        }
+      }
+    },
+    "status_as_of": {
+      "type": "string",
+      "format": "date"
+    },
+    "scope": {
+      "const": "candidate_records_under_review"
+    },
+    "candidate_record_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "candidate_asset_count": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

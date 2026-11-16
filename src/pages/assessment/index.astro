@@ -1,0 +1,94 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getAssessmentLedger } from "../../lib/assessment";
+import { fieldState, formatDate, withBase } from "../../lib/format";
+
+const { resources, assets } = await getAssessmentLedger();
+const includedResources = resources.filter((row) => row.eligibility_outcome === "include");
+const excludedResources = resources.filter((row) => row.eligibility_outcome === "exclude");
+const auditResources = resources.filter((row) => !["include", "exclude"].includes(row.eligibility_outcome));
+const includedAssets = assets.filter((row) => row.eligibility_outcome === "include");
+const excludedAssets = assets.filter((row) => row.eligibility_outcome === "exclude");
+const auditAssets = assets.filter((row) => !["include", "exclude"].includes(row.eligibility_outcome));
+const assessmentDate = [...resources, ...assets].map((row) => row.assessment_date).filter(Boolean).sort().at(-1);
+const counts = [
+  { label: "Included resources", value: includedResources.length },
+  { label: "Included assets", value: includedAssets.length },
+  { label: "Excluded resources", value: excludedResources.length },
+  { label: "Excluded assets", value: excludedAssets.length },
+  ...(auditResources.length ? [{ label: "Audit-only resources", value: auditResources.length }] : []),
+  ...(auditAssets.length ? [{ label: "Audit-only assets", value: auditAssets.length }] : []),
+];
+const resourceById = new Map(resources.map((row) => [row.resource_id, row]));
+---
+
+<BaseLayout title="Assessment decisions" description="Completed catalogue eligibility decisions, source evidence and downloadable resource and asset ledgers.">
+  <header class="page-head page-head--compact">
+    <div class="container assessment-container">
+      <h1>Assessment decisions</h1>
+      <p class="intro">The assessment completed on {formatDate(assessmentDate)} contains {includedResources.length.toLocaleString("en")} included resources and {includedAssets.length.toLocaleString("en")} included assets. Exclusions and audit-only records remain available in the full ledgers.</p>
+      <dl class="assessment-counts">
+        {counts.map((count) => <div><dt>{count.label}</dt><dd>{count.value.toLocaleString("en")}</dd></div>)}
+      </dl>
+    </div>
+  </header>
+  <article class="container assessment-container assessment-page">
+    <section aria-labelledby="ledgers-heading">
+      <h2 id="ledgers-heading">Full assessment ledgers</h2>
+      <p>Each ledger records the outcome, decision reason, source evidence and metadata corrections. Catalogue eligibility does not establish scientific validation or permission to redistribute source files.</p>
+      <ul>
+        <li><a href={withBase("data/assessment-resources.csv")} download>Download resource decisions (CSV)</a></li>
+        <li><a href={withBase("data/assessment-assets.csv")} download>Download asset decisions (CSV)</a></li>
+        <li><a href="https://doi.org/10.5281/zenodo.23034746" rel="noreferrer">Open the archived release on Zenodo</a></li>
+      </ul>
+      <p><a href={withBase("resources/")}>Browse included resources</a> · <a href={withBase("assets/")}>Browse included assets</a></p>
+    </section>
+    <section aria-labelledby="exclusions-heading">
+      <h2 id="exclusions-heading">Excluded resources</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">Resource</th><th scope="col">Reason</th></tr></thead>
+          <tbody>{excludedResources.map((row) => <tr>
+            <td><a href={withBase(`under-review/${row.resource_id}/`)}>{row.reviewed_title || row.original_title || row.resource_id}</a></td>
+            <td>{row.reason}</td>
+          </tr>)}</tbody>
+        </table>
+      </div>
+    </section>
+    {auditResources.length > 0 && <section aria-labelledby="audit-resources-heading">
+      <h2 id="audit-resources-heading">Audit-only resources</h2>
+      <ul>{auditResources.map((row) => <li><a href={withBase(`under-review/${row.resource_id}/`)}>{row.reviewed_title || row.original_title || row.resource_id}</a>: {row.reason}</li>)}</ul>
+    </section>}
+    {auditAssets.length > 0 && <section aria-labelledby="audit-assets-heading">
+      <h2 id="audit-assets-heading">Audit-only assets</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th scope="col">Asset</th><th scope="col">Outcome and reason</th></tr></thead>
+        <tbody>{auditAssets.map((row) => {
+          const parent = resourceById.get(row.resource_id);
+          const parentPath = parent?.eligibility_outcome === "include" ? `resources/${row.resource_id}/` : `under-review/${row.resource_id}/`;
+          return <tr id={`asset-${row.asset_id}`}>
+            <td>{row.reviewed_title || row.original_title || row.asset_id}{parent && <small>Resource: <a href={withBase(parentPath)}>{parent.reviewed_title || parent.original_title || parent.resource_id}</a></small>}</td>
+            <td>{fieldState(row.eligibility_outcome)}: {row.reason}</td>
+          </tr>;
+        })}</tbody>
+      </table></div>
+    </section>}
+  </article>
+</BaseLayout>
+
+<style>
+  .assessment-container { max-width: 64rem; }
+  .intro { max-width: 62ch; }
+  .assessment-counts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; margin: 2rem 0 0; }
+  .assessment-counts dt { font-size: 0.85rem; color: var(--ink-soft); }
+  .assessment-counts dd { margin: 0.2rem 0 0; font-size: 1.6rem; font-weight: 650; }
+  .assessment-page { padding-block: 2rem 5rem; }
+  .assessment-page section + section { margin-top: 3rem; }
+  .assessment-page li + li { margin-top: 0.4rem; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 0.9rem 1.2rem 0.9rem 0; text-align: left; vertical-align: top; border-bottom: 1px solid var(--rule); }
+  td:first-child { width: 40%; }
+  td small { display: block; margin-top: 0.3rem; color: var(--ink-soft); }
+  @media (max-width: 42rem) { .assessment-counts { grid-template-columns: repeat(2, minmax(0, 1fr)); } th, td { min-width: 12rem; } }
+</style>

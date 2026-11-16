@@ -1,0 +1,39 @@
+---
+import type { ReviewStatus } from "../lib/types";
+import { formatDate } from "../lib/format";
+
+interface Props {
+  status: ReviewStatus;
+}
+
+const { status } = Astro.props;
+---
+
+<section class="status-strip" aria-labelledby="search-status-heading">
+  <div class="container status-inner">
+    <p class="status-copy" id="search-status-heading">{status.searches_complete_through ? <>Initial searches through {formatDate(status.searches_complete_through)}; monthly maintenance planned.</> : <>Searches commenced {formatDate(status.initial_cycle_started_on)}; initial search programme in progress.</>} <span>Status as of {formatDate(status.status_as_of)}.</span></p>
+  </div>
+</section>
+
+<style>
+  .status-strip {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .status-inner {
+    padding-block: 0.55rem;
+  }
+
+  .status-inner p {
+    margin: 0;
+  }
+
+  .status-copy {
+    color: var(--ink-soft);
+    font-size: 0.84rem;
+  }
+
+  .status-copy span {
+    white-space: nowrap;
+  }
+</style>

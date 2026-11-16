@@ -1,0 +1,313 @@
+---
+import { withBase } from "../lib/format";
+
+const path = Astro.url.pathname;
+const links = [
+  ["Catalogue", withBase("")],
+  ["Resources", withBase("resources/")],
+  ["Assets", withBase("assets/")],
+  ["Searches", withBase("searches/")],
+  ["Nominate", withBase("nominate/")],
+  ["About", withBase("about/")],
+] as const;
+---
+
+<header class="site-header">
+  <div class="masthead container">
+    <div class="institution-lockup">
+      <a class="brand-lockup brand-lockup--nkua" href={withBase("")} aria-label="Public Data Resources for the 26 August 2026 Nepal Hazard Cascade home">
+        <picture>
+          <source media="(max-width: 42rem)" srcset={withBase("brand/nkua-190-en-stacked.png")} />
+          <img src={withBase("brand/nkua-190-en-horizontal.png")} alt="National and Kapodistrian University of Athens, 190 years" />
+        </picture>
+      </a>
+      <span class="affiliation-divider" aria-hidden="true"></span>
+      <div class="brand-lockup brand-lockup--tu">
+        <img src={withBase("brand/tribhuvan-university-emblem.png")} alt="Tribhuvan University emblem" />
+        <span>Tribhuvan University</span>
+      </div>
+    </div>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation" data-nav-toggle hidden>
+      <span>Menu</span>
+      <svg viewBox="0 0 20 20" aria-hidden="true">
+        <path d="M3 5.5h14M3 10h14M3 14.5h14"></path>
+      </svg>
+    </button>
+    <nav class="site-nav" id="primary-navigation" aria-label="Primary navigation" data-site-nav>
+      <ul>
+        {links.map(([label, href]) => {
+          const active = label === "Catalogue"
+            ? path === withBase("")
+            : label === "Resources"
+              ? path.startsWith(href) || path.startsWith(withBase("under-review/"))
+              : path.startsWith(href);
+          return <li><a href={href} aria-current={active ? "page" : undefined}>{label}</a></li>;
+        })}
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<script>
+  const siteHeader = document.querySelector<HTMLElement>(".site-header");
+  const navToggle = siteHeader?.querySelector<HTMLButtonElement>("[data-nav-toggle]");
+  const siteNav = siteHeader?.querySelector<HTMLElement>("[data-site-nav]");
+  const compactNav = window.matchMedia("(max-width: 60rem)");
+  let navExpanded = false;
+
+  function renderNavigation() {
+    if (!navToggle || !siteNav) return;
+
+    if (!compactNav.matches) {
+      navExpanded = false;
+      navToggle.hidden = true;
+      navToggle.setAttribute("aria-expanded", "false");
+      siteNav.hidden = false;
+      return;
+    }
+
+    navToggle.hidden = false;
+    navToggle.setAttribute("aria-expanded", String(navExpanded));
+    siteNav.hidden = !navExpanded;
+  }
+
+  navToggle?.addEventListener("click", () => {
+    navExpanded = !navExpanded;
+    renderNavigation();
+  });
+
+  siteNav?.addEventListener("click", (event) => {
+    if (compactNav.matches && (event.target as Element).closest("a")) {
+      navExpanded = false;
+      renderNavigation();
+    }
+  });
+
+  document.addEventListener("pointerdown", (event) => {
+    if (navExpanded && compactNav.matches && siteHeader && !siteHeader.contains(event.target as Node)) {
+      navExpanded = false;
+      renderNavigation();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && navExpanded && compactNav.matches) {
+      navExpanded = false;
+      renderNavigation();
+      navToggle?.focus();
+    }
+  });
+
+  compactNav.addEventListener("change", renderNavigation);
+  renderNavigation();
+</script>
+
+<style>
+  .site-header {
+    background: #fff;
+    border-bottom: 1px solid var(--rule-strong);
+  }
+
+  .masthead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    min-height: 4.75rem;
+  }
+
+  .institution-lockup {
+    display: flex;
+    flex: 0 1 auto;
+    align-items: center;
+    gap: 0.85rem;
+    min-width: 0;
+  }
+
+  .brand-lockup {
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  .brand-lockup--nkua {
+    display: block;
+    width: 10.5rem;
+  }
+
+  .brand-lockup--nkua img {
+    width: 100%;
+    max-height: 3rem;
+    object-fit: contain;
+    object-position: left center;
+  }
+
+  .affiliation-divider {
+    height: 2.5rem;
+    width: 1px;
+    background: var(--rule);
+  }
+
+  .brand-lockup--tu {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+    font-family: var(--serif);
+    font-size: 0.88rem;
+    font-weight: 650;
+    line-height: 1.2;
+  }
+
+  .brand-lockup--tu img {
+    width: 2.65rem;
+    height: 2.65rem;
+    object-fit: contain;
+  }
+
+  .site-nav {
+    flex: 0 0 auto;
+  }
+
+  .nav-toggle {
+    display: none;
+  }
+
+  .site-nav ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem 1.35rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .site-nav a {
+    min-height: 4.75rem;
+    display: flex;
+    align-items: center;
+    border-bottom: 3px solid transparent;
+    color: var(--ink);
+    font-size: 0.94rem;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .site-nav a:hover,
+  .site-nav a[aria-current="page"] {
+    border-bottom-color: var(--teal);
+    color: var(--teal-dark);
+  }
+
+  @media (max-width: 60rem) {
+    .masthead {
+      display: block;
+      min-height: 0;
+      padding-top: 0.9rem;
+    }
+
+    .nav-toggle {
+      display: flex;
+      width: 100%;
+      min-height: 3.3rem;
+      justify-content: space-between;
+      margin-top: 0.85rem;
+      border: 0;
+      border-top: 1px solid var(--rule);
+      border-radius: 0;
+      background: transparent;
+      color: var(--ink);
+      padding: 0;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .nav-toggle:hover {
+      background: transparent;
+      color: var(--teal-dark);
+    }
+
+    .nav-toggle svg {
+      width: 1.15rem;
+      height: 1.15rem;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.55;
+      stroke-linecap: round;
+    }
+
+    .site-nav {
+      margin: 0;
+      border-top: 1px solid var(--rule);
+    }
+
+    .site-nav ul {
+      display: block;
+      padding-block: 0.35rem 0.85rem;
+    }
+
+    .site-nav li + li {
+      border-top: 1px solid var(--rule);
+    }
+
+    .site-nav a {
+      min-height: 3.25rem;
+      border-bottom: 0;
+      padding-inline: 0.1rem;
+    }
+
+    .site-nav a:hover,
+    .site-nav a[aria-current="page"] {
+      border-bottom: 0;
+      text-decoration: underline;
+      text-decoration-color: #9fb8b7;
+      text-underline-offset: 0.22em;
+    }
+  }
+
+  @media (max-width: 42rem) {
+    .institution-lockup {
+      gap: 0.65rem;
+    }
+
+    .brand-lockup--nkua {
+      width: 7.5rem;
+    }
+
+    .brand-lockup--nkua img {
+      height: 2.7rem;
+    }
+
+    .affiliation-divider {
+      height: 2.2rem;
+    }
+
+    .brand-lockup--tu {
+      font-size: 0.78rem;
+    }
+
+    .brand-lockup--tu img {
+      width: 2.35rem;
+      height: 2.35rem;
+    }
+  }
+
+  @media (max-width: 32rem) {
+    .institution-lockup {
+      gap: 0.5rem;
+    }
+
+    .brand-lockup--nkua {
+      width: 6.8rem;
+    }
+
+    .brand-lockup--tu {
+      gap: 0.35rem;
+      font-size: 0.73rem;
+    }
+
+    .brand-lockup--tu img {
+      width: 2.15rem;
+      height: 2.15rem;
+    }
+  }
+</style>

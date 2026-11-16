@@ -1,0 +1,55 @@
+name: nepal-flood-2026-catalogue
+
+services:
+  catalogue:
+    image: nginx:1.27-alpine
+    container_name: nepal-flood-2026-catalogue
+    depends_on:
+      - counter
+    restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ./site:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+    expose:
+      - "8080"
+    networks:
+      nkua-proxy:
+        aliases:
+          - nepal-flood-2026-catalogue
+
+  counter:
+    image: python:3.12-alpine
+    container_name: nepal-flood-2026-catalogue-counter
+    command:
+      - python
+      - /app/visit_counter.py
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8766"
+      - --count-file
+      - /app/data/visits.json
+    restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    user: "65534:65534"
+    volumes:
+      - ./visit_counter.py:/app/visit_counter.py:ro
+      - ./data:/app/data
+    tmpfs:
+      - /tmp
+    expose:
+      - "8766"
+    networks:
+      - nkua-proxy
+
+networks:
+  nkua-proxy:
+    external: true

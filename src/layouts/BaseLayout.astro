@@ -1,0 +1,64 @@
+---
+import SiteHeader from "../components/SiteHeader.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import "../styles/global.css";
+
+interface Props {
+  title?: string;
+  description: string;
+  noindex?: boolean;
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+}
+
+const {
+  title,
+  description,
+  noindex = false,
+  jsonLd,
+} = Astro.props;
+const siteName = "Public Data Resources for the 26 August 2026 Nepal Hazard Cascade";
+const pageTitle = title ? `${title} | ${siteName}` : siteName;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const socialImage = new URL(`${import.meta.env.BASE_URL}images/rasuwa-flood-betrawati-2026.jpg`, Astro.site).toString();
+const socialImageAlt = "Flood damage at Betrawati, Rasuwa, following the 26 August 2026 Nepal hazard cascade";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex,follow" />}
+    <link rel="canonical" href={canonical} />
+		<link rel="icon" type="image/png" sizes="512x512" href={`${import.meta.env.BASE_URL}favicon-nkua.png`} />
+		<link rel="apple-touch-icon" href={`${import.meta.env.BASE_URL}favicon-nkua.png`} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={siteName} />
+		<meta property="og:title" content={pageTitle} />
+		<meta property="og:description" content={description} />
+		<meta property="og:url" content={canonical} />
+		<meta property="og:image" content={socialImage} />
+		<meta property="og:image:secure_url" content={socialImage} />
+		<meta property="og:image:type" content="image/jpeg" />
+		<meta property="og:image:width" content="1600" />
+		<meta property="og:image:height" content="739" />
+		<meta property="og:image:alt" content={socialImageAlt} />
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:title" content={pageTitle} />
+		<meta name="twitter:description" content={description} />
+		<meta name="twitter:image" content={socialImage} />
+		<meta name="twitter:image:alt" content={socialImageAlt} />
+    <title>{pageTitle}</title>
+    {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <SiteHeader />
+    <main id="main-content">
+      <slot />
+    </main>
+    <SiteFooter />
+  </body>
+</html>

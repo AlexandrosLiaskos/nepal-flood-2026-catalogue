@@ -1,0 +1,18 @@
+{
+  "schema_version": "2.0.0",
+  "catalogue_status": "active",
+  "status_as_of": "2026-01-02",
+  "initial_cycle_started_on": "2026-01-01",
+  "first_search_at": "2026-01-01T00:00:00Z",
+  "last_search_at": "2026-01-02T00:00:00Z",
+  "searches_complete_through": null,
+  "manuscript_version": null,
+  "search_status": "ongoing",
+  "nomination_status": "open",
+  "reviewed_resources": 0,
+  "reviewed_assets": 0,
+  "included_resources": 0,
+  "candidate_records_under_review": 0,
+  "candidate_assets_under_review": 0,
+  "newly_eligible_awaiting_integration": 0
+}

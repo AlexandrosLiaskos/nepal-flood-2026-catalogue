@@ -1,0 +1,53 @@
+---
+import AssessmentDecision from "../../components/AssessmentDecision.astro";
+import { getAssessmentLedger, type AssessmentResource, type AssessmentAsset } from "../../lib/assessment";
+import { withBase } from "../../lib/format";
+
+export async function getStaticPaths() {
+  const { resources, assets } = await getAssessmentLedger();
+  const assetsByResource = new Map<string, AssessmentAsset[]>();
+  for (const asset of assets) {
+    const siblings = assetsByResource.get(asset.resource_id) ?? [];
+    siblings.push(asset);
+    assetsByResource.set(asset.resource_id, siblings);
+  }
+  return resources.map((assessment) => ({
+    params: { record_id: assessment.resource_id },
+    props: { assessment, assets: assetsByResource.get(assessment.resource_id) ?? [] },
+  }));
+}
+
+interface Props {
+  assessment: AssessmentResource;
+  assets: AssessmentAsset[];
+}
+
+const { assessment, assets } = Astro.props;
+const included = assessment.eligibility_outcome === "include";
+const target = withBase(`resources/${assessment.resource_id}/`);
+const title = assessment.reviewed_title || assessment.original_title || assessment.resource_id;
+const excludedAssetTargets = Object.fromEntries(assets
+  .filter((asset) => asset.eligibility_outcome !== "include")
+  .map((asset) => [asset.asset_id, withBase(`assets/${asset.asset_id}/`)]));
+---
+
+{included ? <html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <link rel="canonical" href={new URL(target, Astro.site).toString()} />
+    <meta name="robots" content="noindex" />
+    <script is:inline define:vars={{ target, excludedAssetTargets }}>
+      let fragment = location.hash.slice(1);
+      try { fragment = decodeURIComponent(fragment); } catch {}
+      const assetId = fragment.startsWith("asset-") ? fragment.slice(6) : fragment;
+      const destination = Object.prototype.hasOwnProperty.call(excludedAssetTargets, assetId)
+        ? excludedAssetTargets[assetId]
+        : null;
+      location.replace(destination ? destination + location.search : target + location.search + location.hash);
+    </script>
+    <meta http-equiv="refresh" content={`2;url=${target}`} />
+  </head>
+  <body><p>This resource is included in the completed assessment. <a href={target}>Open the resource record</a>.</p></body>
+</html> : <AssessmentDecision assessment={assessment} assets={assets} />}

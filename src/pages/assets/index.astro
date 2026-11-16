@@ -1,0 +1,933 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import {
+  getAssetReviews,
+  dispositionLabels,
+  isPrimaryScientificAsset,
+  getHazardCascadeDomain,
+  HAZARD_DOMAINS,
+  canOpenReviewedAsset,
+  reviewedAssetAccessLabel,
+} from "../../lib/asset-review";
+import FilterSelect from "../../components/FilterSelect.astro";
+import { getPublicData } from "../../lib/data";
+import { cleanScientificTitle, extractBaseLayerName, fileFormatLabel, humanize, splitValues, withBase } from "../../lib/format";
+
+const { resources, assets, candidates, candidateAssets } = await getPublicData();
+const assetReview = await getAssetReviews();
+const resourceById = new Map(resources.map((resource) => [resource.resource_id, resource]));
+const candidateById = new Map(candidates.map((candidate) => [candidate.record_id, candidate]));
+
+const unique = (values: string[]) => {
+  const normalized = new Map<string, string>();
+  for (const value of values) {
+    const label = value.trim();
+    if (label && !normalized.has(label.toLocaleLowerCase("en"))) {
+      normalized.set(label.toLocaleLowerCase("en"), label);
+    }
+  }
+  return [...normalized.values()].sort((a, b) => a.localeCompare(b));
+};
+
+// 1. Process and consolidate reviewed assets by (resource_id, baseTitle)
+interface FormatOption {
+  label: string;
+  format: string;
+  size: string;
+  url: string;
+  assetId: string;
+  href: string;
+  canOpen: boolean;
+  accessLabel: string;
+}
+
+const reviewedGroups = new Map<string, typeof assets>();
+for (const asset of assets) {
+  const { baseTitle } = extractBaseLayerName(asset.title);
+  const tier = isPrimaryScientificAsset(assetReview.byId.get(asset.asset_id), asset.asset_type, asset.file_format) ? "primary" : "auxiliary";
+  const key = `${asset.resource_id}::${baseTitle}::${tier}`;
+  if (!reviewedGroups.has(key)) {
+    reviewedGroups.set(key, []);
+  }
+  reviewedGroups.get(key)!.push(asset);
+}
+
+const consolidatedReviewedAssets = [...reviewedGroups.entries()].map(([key, groupAssets]) => {
+  const first = groupAssets[0];
+  const resource = resourceById.get(first.resource_id)!;
+  const { baseTitle } = extractBaseLayerName(first.title);
+  const contributor = first.listed_contributor || first.host_or_aggregator || resource.provider;
+  const temporalCoverage = [first.temporal_start, first.temporal_end].filter(Boolean).join(" – ");
+  const coverageLabel = first.bbox_wgs84
+    ? `WGS 84 bounding box: ${first.bbox_wgs84}`
+    : resource.geographic_scope
+      ? `Asset bounding box not stated. Parent resource coverage: ${resource.geographic_scope}`
+      : "Asset bounding box not stated.";
+
+  const formats: FormatOption[] = groupAssets.map((a) => {
+    const { formatLabel } = extractBaseLayerName(a.title);
+    return {
+      label: formatLabel || fileFormatLabel(a.file_format) || "Data",
+      format: a.file_format,
+      size: a.size_as_shown,
+      url: a.asset_url,
+      assetId: a.asset_id,
+      href: withBase(`assets/${a.asset_id}/`),
+      canOpen: canOpenReviewedAsset(assetReview.byId.get(a.asset_id)),
+      accessLabel: assetReview.byId.has(a.asset_id) ? reviewedAssetAccessLabel(assetReview.byId.get(a.asset_id)!) : "Access not verified",
+    };
+  });
+
+  const allFormatsStr = groupAssets.map((a) => a.file_format).join(" ");
+  const domain = getHazardCascadeDomain(baseTitle, first.asset_type, first.dataset_family);
+
+  return {
+    id: first.asset_id,
+    allAssetIds: groupAssets.map((a) => a.asset_id),
+    title: baseTitle,
+    cleanTitle: cleanScientificTitle(baseTitle),
+    titleLanguage: "en" as string | undefined,
+    secondaryTitle: first.title_original !== first.title && !groupAssets.some((a) => a.title_original === baseTitle)
+      ? first.title_original
+      : "",
+    secondaryTitleLanguage: first.title_language as string | undefined,
+    href: withBase(`assets/${first.asset_id}/`),
+    assetUrl: first.asset_url,
+    resourceId: first.resource_id,
+    parentTitle: resource.canonical_title,
+    parentHref: withBase(`resources/${first.resource_id}/`),
+    provider: resource.provider,
+    contributors: [contributor],
+    contributorLabel: contributor,
+    themes: splitValues(resource.thematic_categories),
+    evidenceClass: resource.evidence_class,
+    assetTypes: splitValues(first.asset_type),
+    fileFormat: first.file_format,
+    allFormats: groupAssets.map((a) => a.file_format.toLowerCase()),
+    formats,
+    tier: isPrimaryScientificAsset(assetReview.byId.get(first.asset_id), first.asset_type, first.file_format) ? ("primary" as const) : ("auxiliary" as const),
+    domain,
+    temporalRole: first.temporal_role,
+    temporalLabel: [humanize(first.temporal_role), temporalCoverage].filter(Boolean).join(" · "),
+    access: first.access_tier,
+    rights: first.rights_status,
+    fileSummary: formats.length === 1 ? [first.file_format, first.size_as_shown].filter(Boolean).join(" · ") : "",
+    coverageLabel,
+    searchText: `${baseTitle} ${groupAssets.map((a) => a.title).join(" ")} ${resource.canonical_title} ${resource.provider} ${resource.thematic_categories} ${resource.evidence_class} ${contributor} ${first.normalized_contributors} ${first.dataset_family} ${first.asset_type} ${allFormatsStr} ${first.bbox_wgs84} ${resource.geographic_scope} ${domain.label}`.toLowerCase(),
+  };
+});
+
+// 2. Process candidate assets
+const processedCandidateAssets = candidateAssets.map((asset) => {
+  const candidate = candidateById.get(asset.record_id)!;
+  const normalizedContributors = splitValues(asset.normalized_contributors);
+  const contributors = normalizedContributors.length ? normalizedContributors : [asset.listed_contributor];
+  const page = Math.max(1, Math.ceil(asset.position / 18));
+  const cleanTitle = cleanScientificTitle(asset.title_english || asset.title_original);
+  const review = assetReview.byId.get(asset.candidate_asset_id);
+  const isPrimary = isPrimaryScientificAsset(review, asset.content_class, asset.file_format);
+  const domain = getHazardCascadeDomain(cleanTitle, asset.content_class, asset.platform_or_dataset_family);
+
+  const formats: FormatOption[] = [
+    {
+      label: fileFormatLabel(asset.file_format) || "Link",
+      format: asset.file_format,
+      size: asset.size_as_shown,
+      url: asset.asset_url,
+      assetId: asset.candidate_asset_id,
+      href: `${withBase(`under-review/${asset.record_id}/`)}?asset_page=${page}#asset-${asset.candidate_asset_id}`,
+      canOpen: canOpenReviewedAsset(review),
+      accessLabel: review ? reviewedAssetAccessLabel(review) : "Access not verified",
+    },
+  ];
+
+  return {
+    id: asset.candidate_asset_id,
+    allAssetIds: [asset.candidate_asset_id],
+    title: asset.title_english || asset.title_original,
+    cleanTitle,
+    titleLanguage: asset.title_english ? "en" : candidate.original_language,
+    secondaryTitle: "",
+    secondaryTitleLanguage: undefined as string | undefined,
+    href: `${withBase(`under-review/${asset.record_id}/`)}?asset_page=${page}#asset-${asset.candidate_asset_id}`,
+    assetUrl: asset.asset_url,
+    resourceId: asset.record_id,
+    parentTitle: candidate.display_title,
+    parentHref: withBase(`under-review/${asset.record_id}/`),
+    provider: candidate.source_name,
+    contributors,
+    contributorLabel: contributors.join("; "),
+    themes: [] as string[],
+    evidenceClass: "",
+    assetTypes: splitValues(asset.content_class),
+    fileFormat: asset.file_format,
+    allFormats: [asset.file_format.toLowerCase()],
+    formats,
+    tier: isPrimary ? ("primary" as const) : ("auxiliary" as const),
+    domain,
+    temporalRole: asset.temporal_role,
+    temporalLabel: humanize(asset.temporal_role),
+    access: asset.access_status,
+    rights: asset.rights_status,
+    fileSummary: [asset.file_format, asset.size_as_shown].filter(Boolean).join(" · "),
+    coverageLabel: "",
+    searchText: `${asset.title_original} ${asset.title_english} ${cleanTitle} ${candidate.display_title} ${asset.listed_contributor} ${asset.normalized_contributors} ${asset.platform_or_dataset_family} ${asset.content_class} ${domain.label}`.toLowerCase(),
+  };
+});
+
+// 3. Combine rows and attach review metadata
+const rows = [...consolidatedReviewedAssets, ...processedCandidateAssets].map((row) => {
+  const review = assetReview.byId.get(row.id);
+  if (!review) throw new Error("Missing asset review: " + row.id);
+  return {
+    ...row,
+    temporalRole: review.temporal_assessment,
+    reviewLabel: dispositionLabels[review.screening_disposition] ?? review.screening_disposition,
+    reviewFilter: review.needs_follow_up ? "follow_up" : "no_flagged_follow_up",
+    disposition: review.screening_disposition,
+    needsFollowUp: review.needs_follow_up,
+    canOpen: canOpenReviewedAsset(review),
+    accessLabel: reviewedAssetAccessLabel(review),
+  };
+});
+
+const totalRowsCount = rows.length;
+const primaryCount = rows.filter((r) => r.tier === "primary").length;
+const auxiliaryCount = rows.filter((r) => r.tier === "auxiliary").length;
+const currentFollowUpCount = [...assets.map((asset) => asset.asset_id), ...candidateAssets.map((asset) => asset.candidate_asset_id)]
+  .filter((id) => assetReview.byId.get(id)?.needs_follow_up).length;
+
+const parentResources = [...new Map(rows.map((row) => [row.resourceId, { id: row.resourceId, title: row.parentTitle }])).values()]
+  .sort((a, b) => a.title.localeCompare(b.title));
+const themes = unique(rows.flatMap((row) => row.themes));
+const evidenceClasses = unique(rows.map((row) => row.evidenceClass));
+const assetTypes = unique(rows.flatMap((row) => row.assetTypes));
+const fileFormats = unique(rows.map((row) => row.fileFormat));
+const contributors = unique(rows.flatMap((row) => row.contributors));
+const temporalRoles = unique(rows.map((row) => row.temporalRole));
+
+const temporalLabel = (value: string) =>
+  ({
+    not_resolved_from_asset_dates: "Date not established",
+    pre_event_reference_date_not_stated: "Pre-event reference",
+    baseline_context_date_not_stated: "Baseline",
+    pre_event: "Pre-event",
+    spans_event: "Spans event",
+    event_or_post_event: "Event / post-event",
+    baseline_reference: "Reference baseline",
+    historical_context: "Historical context",
+  }[value] ?? humanize(value));
+
+const description = "Index of scientific data assets and records documented in Public Data Resources for the 26 August 2026 Nepal Hazard Cascade.";
+---
+
+<BaseLayout title="Assets" description={description}>
+  <header class="page-head page-head--compact asset-head">
+    <div class="container asset-container">
+      <h1>Assets & Data Products</h1>
+      <p class="asset-totals" aria-label="Asset totals">
+        <span><strong>{primaryCount.toLocaleString("en")}</strong> primary data and analysis groups</span>
+        <span>{assets.length.toLocaleString("en")} included assets</span>
+        {candidateAssets.length > 0 && <span>{candidateAssets.length.toLocaleString("en")} assets under review</span>}
+        <span>{currentFollowUpCount.toLocaleString("en")} follow-up flags</span>
+      </p>
+      <p class="asset-availability-note">
+        The index groups related distributions and initially shows data, analytical products, documents and workflows. Supporting material, including previews, metadata and quality layers, is available through the scope switcher. Groups and files are not independent measurements.
+        <a href={withBase("review/assets/")}>Methodological review findings</a>
+      </p>
+    </div>
+  </header>
+
+  <main class="asset-index">
+    <div class="container asset-container">
+      <form class="asset-filters" id="asset-index-filters" aria-label="Filter assets">
+        <!-- Asset Scope / Tier Switcher -->
+        <div class="tier-switcher" role="radiogroup" aria-label="Asset tier">
+          <label class="tier-option tier-option--active">
+            <input type="radio" name="tier" value="primary" checked />
+            <span class="tier-label">Data & analysis <span class="tier-count">({primaryCount.toLocaleString("en")})</span></span>
+          </label>
+          <label class="tier-option">
+            <input type="radio" name="tier" value="all" />
+            <span class="tier-label">All Records <span class="tier-count">({totalRowsCount.toLocaleString("en")})</span></span>
+          </label>
+          <label class="tier-option">
+            <input type="radio" name="tier" value="auxiliary" />
+            <span class="tier-label">Supporting material <span class="tier-count">({auxiliaryCount.toLocaleString("en")})</span></span>
+          </label>
+        </div>
+
+        <div class="asset-filter-grid">
+          <div class="field--search">
+            <label for="asset-index-query">Title or keyword</label>
+            <input id="asset-index-query" name="q" type="search" placeholder="Search sensor, location, variable..." autocomplete="off" />
+          </div>
+
+          <FilterSelect
+            id="asset-index-domain"
+            name="domain"
+            label="Scientific domain"
+            options={[
+              { value: "", label: "All scientific domains" },
+              ...Object.values(HAZARD_DOMAINS).map((d) => ({ value: d.id, label: d.label })),
+            ]}
+          />
+
+          <FilterSelect
+            id="asset-index-resource"
+            name="resource"
+            label="Resource"
+            options={[{ value: "", label: "All resources" }, ...parentResources.map((item) => ({ value: item.id, label: item.title }))]}
+          />
+
+          <FilterSelect
+            id="asset-index-contributor"
+            name="contributor"
+            label="Contributor"
+            options={[{ value: "", label: "All contributors" }, ...contributors.map((item) => ({ value: item, label: item }))]}
+          />
+
+          <FilterSelect
+            id="asset-index-format"
+            name="format"
+            label="File format"
+            options={[{ value: "", label: "All file formats" }, ...fileFormats.map((item) => ({ value: item, label: fileFormatLabel(item) }))]}
+          />
+
+          <FilterSelect
+            id="asset-index-temporal"
+            name="temporal"
+            label="Temporal epoch"
+            options={[{ value: "", label: "All temporal epochs" }, ...temporalRoles.map((item) => ({ value: item, label: temporalLabel(item) }))]}
+          />
+
+          <FilterSelect
+            id="asset-index-review"
+            name="review"
+            label="Review follow-up"
+            options={[
+              { value: "", label: "All review states" },
+              { value: "no_flagged_follow_up", label: "No flagged follow-up" },
+              { value: "follow_up", label: "Follow-up needed" },
+            ]}
+          />
+        </div>
+
+        <div class="filter-footer">
+          <p class="asset-results-count" id="asset-index-count" aria-live="polite">
+            Showing {primaryCount} data and analysis groups
+          </p>
+          <button class="button--quiet reset-button" type="reset">Clear filters</button>
+        </div>
+      </form>
+
+      <div class="table-wrap" data-mobile-table-wrap>
+        <table class="asset-table" data-mobile-table>
+          <caption class="visually-hidden">Catalogue assets</caption>
+          <thead>
+            <tr>
+              <th scope="col" style="width: 44%;">Asset & Data Product</th>
+              <th scope="col" style="width: 24%;">Scientific Domain</th>
+              <th scope="col" style="width: 18%;">Temporal Epoch</th>
+              <th scope="col" style="width: 14%;">Access</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr
+                data-asset-index-row
+                data-tier={row.tier}
+                data-domain={row.domain.id}
+                data-search={row.searchText}
+                data-resource={row.resourceId}
+                data-theme={row.themes.join("|")}
+                data-evidence={row.evidenceClass}
+                data-type={row.assetTypes.join("|")}
+                data-format={row.allFormats.join("|")}
+                data-contributor={row.contributors.join("|")}
+                data-temporal={row.temporalRole}
+                data-review={row.reviewFilter}
+                data-disposition={row.disposition}
+              >
+                <th scope="row">
+                  <a class="asset-title-link" href={row.href} lang={row.titleLanguage}>
+                    {row.cleanTitle}
+                  </a>
+                  {row.secondaryTitle && <span class="asset-secondary" lang={row.secondaryTitleLanguage}>{row.secondaryTitle}</span>}
+                  <span class="asset-parent-link">
+                    From <a href={row.parentHref}>{row.parentTitle}</a>
+                  </span>
+                  {row.coverageLabel && <span class="asset-secondary">{row.coverageLabel}</span>}
+
+                  {/* Multi-format direct links or single summary */}
+                  {row.formats.length > 1 ? (
+                    <div class="format-badges" aria-label="Available download formats">
+                      <span class="format-badges-label">Formats:</span>
+                      {row.formats.map((fmt) => (
+                        <a
+                          class="format-chip"
+                          href={fmt.canOpen ? fmt.url : fmt.href}
+                          target={fmt.canOpen ? "_blank" : undefined}
+                          rel={fmt.canOpen ? "noreferrer" : undefined}
+                          title={`${fmt.canOpen ? fmt.accessLabel : "View access conditions"}: ${fmt.label}${fmt.size ? ` (${fmt.size})` : ""}`}
+                        >
+                          {fmt.label} <small>{fmt.size}</small> ↗
+                        </a>
+                      ))}
+                    </div>
+                  ) : (
+                    row.fileSummary && <span class="asset-file">{row.fileSummary}</span>
+                  )}
+                </th>
+
+                <td data-label="Scientific Domain">
+                  <span class={`domain-badge domain-badge--${row.domain.id}`}>{row.domain.label}</span>
+                </td>
+
+                <td data-label="Temporal Epoch">
+                  <span class="temporal-epoch">{temporalLabel(row.temporalRole)}</span>
+                </td>
+
+                <td data-label="Access">
+                  <div class="access-cell">
+                    {row.canOpen ? (
+                      <a
+                        class="button button--quiet asset-mini-button"
+                        href={row.assetUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        title={row.accessLabel}
+                      >
+                        {row.accessLabel === "Free registration required" ? "Access via registration ↗" : row.fileFormat?.toLowerCase() === "pdf" ? "View PDF ↗" : "Open access route ↗"}
+                      </a>
+                    ) : (
+                      <span class="status-pill status-pill--restricted">{row.accessLabel}</span>
+                    )}
+                    {row.needsFollowUp && (
+                      <span class="status-pill status-pill--warn">Follow-up</span>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <p class="asset-empty" id="asset-index-empty" hidden>No assets match these filters.</p>
+
+      <nav class="asset-pager" id="asset-index-pager" aria-label="Asset pages">
+        <button class="button--quiet" type="button" id="asset-index-previous" disabled>Previous</button>
+        <span id="asset-index-page-state" aria-live="polite">Page 1</span>
+        <button class="button--quiet" type="button" id="asset-index-next">Next</button>
+      </nav>
+    </div>
+  </main>
+
+  <script>
+    const form = document.querySelector<HTMLFormElement>("#asset-index-filters");
+    const rows = [...document.querySelectorAll<HTMLTableRowElement>("[data-asset-index-row]")];
+    const count = document.querySelector<HTMLElement>("#asset-index-count");
+    const empty = document.querySelector<HTMLElement>("#asset-index-empty");
+    const table = document.querySelector<HTMLElement>(".table-wrap");
+    const pager = document.querySelector<HTMLElement>("#asset-index-pager");
+    const previous = document.querySelector<HTMLButtonElement>("#asset-index-previous");
+    const next = document.querySelector<HTMLButtonElement>("#asset-index-next");
+    const pageState = document.querySelector<HTMLElement>("#asset-index-page-state");
+    const tierOptions = [...document.querySelectorAll<HTMLLabelElement>(".tier-option")];
+    const tierInputs = [...document.querySelectorAll<HTMLInputElement>('input[name="tier"]')];
+
+    const pageSize = 25;
+    let page = Math.max(1, Number(new URLSearchParams(location.search).get("page")) || 1);
+
+    if (form && rows.length) {
+      const controls = [...form.elements].filter((element): element is HTMLInputElement | HTMLSelectElement =>
+        element instanceof HTMLInputElement || element instanceof HTMLSelectElement
+      );
+
+      const params = new URLSearchParams(location.search);
+      for (const control of controls) {
+        if (control.name && control.name !== "tier" && params.has(control.name)) {
+          control.value = params.get(control.name) ?? "";
+        }
+      }
+
+      if (params.has("tier")) {
+        const tierParam = params.get("tier")!;
+        const targetRadio = tierInputs.find((r) => r.value === tierParam);
+        if (targetRadio) targetRadio.checked = true;
+      }
+
+      const updateTierClasses = () => {
+        for (const label of tierOptions) {
+          const input = label.querySelector<HTMLInputElement>("input");
+          if (input?.checked) {
+            label.classList.add("tier-option--active");
+          } else {
+            label.classList.remove("tier-option--active");
+          }
+        }
+      };
+
+      const apply = (resetPage = false) => {
+        updateTierClasses();
+        const selectedTier = tierInputs.find((r) => r.checked)?.value || "primary";
+
+        const rawValues = Object.fromEntries(
+          controls
+            .filter((control) => control.name && control.name !== "tier")
+            .map((control) => [control.name, control.value.trim()])
+        );
+        const values = Object.fromEntries(Object.entries(rawValues).map(([key, value]) => [key, value.toLowerCase()]));
+
+        const matches = rows.filter((row) => {
+          const rowTier = row.dataset.tier;
+          if (selectedTier === "primary" && rowTier !== "primary") return false;
+          if (selectedTier === "auxiliary" && rowTier !== "auxiliary") return false;
+
+          if (values.domain && row.dataset.domain !== values.domain) return false;
+          if (values.q && !row.dataset.search?.includes(values.q)) return false;
+          if (values.resource && row.dataset.resource?.toLowerCase() !== values.resource) return false;
+          if (values.temporal && row.dataset.temporal?.toLowerCase() !== values.temporal) return false;
+          if (values.review && row.dataset.review !== values.review) return false;
+          if (values.format) {
+            const rowFormats = row.dataset.format?.toLowerCase().split("|") || [];
+            if (!rowFormats.includes(values.format)) return false;
+          }
+          return true;
+        });
+
+        if (resetPage) page = 1;
+        const totalPages = Math.max(1, Math.ceil(matches.length / pageSize));
+        page = Math.min(page, totalPages);
+        const first = (page - 1) * pageSize;
+        const last = Math.min(first + pageSize, matches.length);
+        const visibleRows = new Set(matches.slice(first, last));
+
+        for (const row of rows) row.hidden = !visibleRows.has(row);
+
+        if (count) {
+          const scopeLabel = selectedTier === "primary" ? "data and analysis groups" : selectedTier === "auxiliary" ? "supporting material groups" : "asset groups";
+          count.textContent = matches.length
+            ? `Showing ${first + 1}–${last} of ${matches.length.toLocaleString("en")} ${scopeLabel}`
+            : "0 assets match current filters";
+        }
+        if (empty) empty.hidden = matches.length !== 0;
+        if (table) table.hidden = matches.length === 0;
+        if (pager) pager.hidden = matches.length === 0 || totalPages === 1;
+        if (previous) previous.disabled = page === 1;
+        if (next) next.disabled = page === totalPages;
+        if (pageState) pageState.textContent = `Page ${page} of ${totalPages}`;
+
+        const nextParams = new URLSearchParams();
+        if (selectedTier !== "primary") nextParams.set("tier", selectedTier);
+        for (const [key, value] of Object.entries(rawValues)) if (value) nextParams.set(key, value);
+        if (page > 1) nextParams.set("page", String(page));
+        const query = nextParams.toString();
+        history.replaceState(null, "", `${location.pathname}${query ? `?${query}` : ""}`);
+      };
+
+      form.addEventListener("input", () => apply(true));
+      form.addEventListener("change", () => apply(true));
+      form.addEventListener("reset", () => {
+        tierInputs[0].checked = true;
+        requestAnimationFrame(() => apply(true));
+      });
+
+      previous?.addEventListener("click", () => {
+        if (page > 1) {
+          page -= 1;
+          apply();
+          window.scrollTo({ top: form.offsetTop - 20, behavior: "smooth" });
+        }
+      });
+      next?.addEventListener("click", () => {
+        page += 1;
+        apply();
+        window.scrollTo({ top: form.offsetTop - 20, behavior: "smooth" });
+      });
+
+      apply();
+    }
+  </script>
+</BaseLayout>
+
+<style>
+  .asset-availability-note {
+    margin-top: 0.5rem;
+    color: var(--ink-soft);
+    font-size: 0.88rem;
+    max-width: 68ch;
+    line-height: 1.45;
+  }
+  .asset-head {
+    padding-bottom: clamp(2rem, 3.5vw, 2.8rem);
+  }
+
+  .asset-container {
+    max-width: 74rem;
+  }
+
+  .asset-totals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 1.2rem;
+    margin: 0.75rem 0 0;
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .asset-totals strong {
+    color: var(--ink);
+  }
+
+  .asset-index {
+    padding-block: 0 clamp(4rem, 8vw, 6rem);
+  }
+
+  /* Segmented Tier Control */
+  .tier-switcher {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 1.2rem;
+    background: var(--surface-muted);
+    border: 1px solid var(--rule);
+    border-radius: 0.25rem;
+    padding: 0.3rem;
+  }
+
+  .tier-option {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    border-radius: 0.2rem;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--ink-soft);
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .tier-option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .tier-option--active {
+    background: var(--teal-dark);
+    color: #fff;
+    font-weight: 650;
+  }
+
+  .tier-count {
+    opacity: 0.85;
+    font-size: 0.8rem;
+    margin-left: 0.25rem;
+  }
+
+  .asset-filters {
+    margin-bottom: 1.8rem;
+  }
+
+  .asset-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.65rem 0.75rem;
+  }
+
+  .asset-filter-grid > div {
+    min-width: 0;
+  }
+
+  .field--search {
+    grid-column: span 2;
+  }
+
+  .asset-filter-grid input {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 2.42rem;
+    padding: 0.38rem 0.55rem;
+    font-size: 0.88rem;
+  }
+
+  .filter-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 0.75rem;
+  }
+
+  .filter-footer p {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 0.86rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+  }
+
+  .asset-table {
+    width: 100%;
+    min-width: 58rem;
+    border-collapse: collapse;
+    table-layout: fixed;
+    text-align: left;
+  }
+
+  .asset-table th,
+  .asset-table td {
+    border-bottom: 1px solid var(--rule);
+    padding: 0.85rem 0.9rem 0.85rem 0;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+  }
+
+  .asset-table thead th {
+    border-bottom-color: var(--rule-strong);
+    color: var(--ink-soft);
+    font-family: var(--sans);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.045em;
+    text-transform: uppercase;
+  }
+
+  .asset-table tbody th {
+    font-family: var(--sans);
+    font-size: 0.94rem;
+    font-weight: 400;
+    line-height: 1.42;
+  }
+
+  .asset-title-link {
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 1.02rem;
+    font-weight: 600;
+    line-height: 1.35;
+    text-decoration-color: #9fb8b7;
+  }
+  .asset-title-link:hover {
+    color: var(--teal-dark);
+  }
+
+  .asset-parent-link {
+    display: block;
+    margin-top: 0.2rem;
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+  }
+  .asset-parent-link a {
+    color: var(--teal-dark);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .asset-secondary,
+  .asset-file {
+    display: block;
+    margin-top: 0.22rem;
+    color: var(--ink-soft);
+    font-size: 0.8rem;
+  }
+
+  /* Multi-format chips */
+  .format-badges {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.4rem;
+  }
+  .format-badges-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .format-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: var(--surface-muted);
+    border: 1px solid var(--rule);
+    border-radius: 0.18rem;
+    padding: 0.15rem 0.42rem;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--teal-dark);
+    text-decoration: none;
+    line-height: 1.3;
+  }
+  .format-chip small {
+    font-weight: 400;
+    color: var(--ink-soft);
+  }
+  .format-chip:hover {
+    border-color: var(--teal);
+    background: var(--surface);
+  }
+
+  /* Domain Badges */
+  .domain-badge {
+    display: inline-block;
+    padding: 0.22rem 0.55rem;
+    border-radius: 0.25rem;
+    font-size: 0.78rem;
+    font-weight: 650;
+    letter-spacing: 0.02em;
+    background: var(--surface-muted);
+    border: 1px solid var(--rule);
+    color: var(--ink);
+    line-height: 1.35;
+  }
+  .domain-badge--seismicity {
+    background: #fdf2e9;
+    border-color: #f8c499;
+    color: #a04000;
+  }
+  .domain-badge--terrain {
+    background: #f5efe6;
+    border-color: #d7c4b7;
+    color: #6e473b;
+  }
+  .domain-badge--cryosphere_source {
+    background: #eaf4f4;
+    border-color: #a8d5d5;
+    color: #065452;
+  }
+  .domain-badge--hydrology_flood {
+    background: #e8f0fe;
+    border-color: #aecbfa;
+    color: #174ea6;
+  }
+  .domain-badge--optical_eo {
+    background: #fef7e0;
+    border-color: #fdd663;
+    color: #b06000;
+  }
+  .domain-badge--radar_sar {
+    background: #f3e8fd;
+    border-color: #d7aefb;
+    color: #7627bb;
+  }
+  .domain-badge--infrastructure_impacts {
+    background: #fce8e6;
+    border-color: #f5b7b1;
+    color: #c5221f;
+  }
+  .domain-badge--reports_synthesis,
+  .domain-badge--preprints {
+    background: #e6f4ea;
+    border-color: #a8dab5;
+    color: #137333;
+  }
+  .domain-badge--reference_vector,
+  .domain-badge--general_evidence {
+    background: #f1f3f4;
+    border-color: #dadce0;
+    color: #3c4043;
+  }
+
+  .temporal-epoch {
+    font-size: 0.84rem;
+    color: var(--ink);
+  }
+
+  /* Access & Review status */
+  .access-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    align-items: flex-start;
+  }
+  .asset-mini-button {
+    min-height: 1.85rem;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.78rem;
+  }
+  .status-pill {
+    display: inline-block;
+    padding: 0.12rem 0.45rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+  .status-pill--clean {
+    background: #e5f2f0;
+    color: var(--teal-dark);
+    border: 1px solid rgba(8, 125, 123, 0.25);
+  }
+  .status-pill--warn {
+    background: #fff2d7;
+    color: #a85d09;
+    border: 1px solid rgba(168, 93, 9, 0.25);
+  }
+  .status-pill--restricted {
+    background: var(--surface-muted);
+    color: var(--ink-soft);
+    border: 1px solid var(--rule);
+  }
+
+  .asset-empty {
+    margin-top: 1.5rem;
+    color: var(--ink-soft);
+  }
+
+  .asset-pager {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+  }
+
+  .asset-pager span {
+    min-width: 6.5rem;
+    color: var(--ink-soft);
+    font-size: 0.86rem;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .asset-pager button {
+    min-height: 2.35rem;
+    padding: 0.38rem 0.72rem;
+    font-size: 0.86rem;
+  }
+
+  .asset-pager button:disabled {
+    border-color: var(--rule);
+    background: var(--surface-muted);
+    color: var(--ink-soft);
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 68rem) {
+    .asset-filter-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 48rem) {
+    .asset-filter-grid {
+      grid-template-columns: 1fr;
+      gap: 0.9rem;
+    }
+    .field--search {
+      grid-column: auto;
+    }
+    .asset-head {
+      padding-block: 2.5rem 2rem;
+    }
+  }
+</style>

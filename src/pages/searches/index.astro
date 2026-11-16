@@ -1,0 +1,142 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getPublicData } from "../../lib/data";
+import { fieldState, formatDate, splitValues, withBase } from "../../lib/format";
+
+const { searchRuns, status } = await getPublicData();
+const description = "Documented searches used to identify resources for Public Data Resources for the 26 August 2026 Nepal Hazard Cascade.";
+---
+
+<BaseLayout title="Searches" description={description}>
+  <header class="page-head page-head--compact search-head">
+    <div class="container search-container">
+      <h1>Searches</h1>
+      <p class="last-search">Last search conducted: {formatDate(status.last_search_at)}</p>
+    </div>
+  </header>
+
+  <main class="search-index">
+    <div class="container search-container">
+      <div class="table-wrap" data-mobile-table-wrap>
+        <table class="search-table" data-mobile-table>
+          <caption class="visually-hidden">Documented catalogue searches</caption>
+          <thead>
+            <tr>
+              <th scope="col">Search</th>
+              <th scope="col">Source</th>
+              <th scope="col">Search date</th>
+              <th scope="col">Resources</th>
+            </tr>
+          </thead>
+          <tbody>
+            {searchRuns.map((search) => (
+              <tr>
+                <th scope="row">
+                  <a href={withBase(`searches/${search.run_id}/`)}>{search.search_name}</a>
+                  <span class="search-outcome">{fieldState(search.status)}</span>
+                </th>
+                <td data-label="Source">{search.source_name}</td>
+                <td data-label="Search date"><time datetime={search.searched_on}>{formatDate(search.searched_on)}</time></td>
+                <td data-label="Resources">{splitValues(search.record_ids).length}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</BaseLayout>
+
+<style>
+  .search-outcome {
+    display: block;
+    margin-top: 0.35rem;
+    color: var(--ink-soft);
+    font-family: var(--sans);
+    font-size: 0.85rem;
+    font-weight: 400;
+  }
+  .search-head {
+    padding-bottom: clamp(2.25rem, 4vw, 3.25rem);
+  }
+
+  .search-container {
+    max-width: 74rem;
+  }
+
+  .last-search {
+    margin: 0.75rem 0 0;
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+  }
+
+  .search-index {
+    padding-block: clamp(2.25rem, 5vw, 4rem) clamp(4rem, 8vw, 6rem);
+  }
+
+  .table-wrap {
+    overflow: visible;
+  }
+
+  .search-table {
+    width: 100%;
+    min-width: 0;
+    border-collapse: collapse;
+    table-layout: fixed;
+    text-align: left;
+  }
+
+  .search-table th,
+  .search-table td {
+    border-bottom: 1px solid var(--rule);
+    padding: 1rem 1.25rem 1rem 0;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+  }
+
+  .search-table thead th {
+    border-bottom-color: var(--rule-strong);
+    color: var(--ink-soft);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.045em;
+    text-transform: uppercase;
+  }
+
+  .search-table tbody th {
+    width: 48%;
+    font-family: var(--serif);
+    font-size: 1.08rem;
+    font-weight: 600;
+    line-height: 1.45;
+  }
+
+  .search-table tbody td {
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+  }
+
+  .search-table tbody td:last-child,
+  .search-table thead th:last-child {
+    padding-right: 0;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (max-width: 60rem) {
+    .search-table tbody th {
+      font-size: 1.02rem;
+    }
+  }
+
+  @media (max-width: 42rem) {
+    .search-head {
+      padding-block: 3rem 2.75rem;
+    }
+
+    .search-index {
+      padding-block: 0 5rem;
+    }
+
+  }
+</style>

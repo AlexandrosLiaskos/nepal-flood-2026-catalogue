@@ -1,0 +1,14 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { withBase } from "../lib/format";
+---
+
+<BaseLayout title="Page not found" description="The requested catalogue page was not found." noindex>
+  <section class="section">
+    <div class="container prose">
+      <h1>Page not found</h1>
+      <p>The requested catalogue page does not exist or may have moved.</p>
+      <p><a class="button" href={withBase("")}>Return to the catalogue</a></p>
+    </div>
+  </section>
+</BaseLayout>

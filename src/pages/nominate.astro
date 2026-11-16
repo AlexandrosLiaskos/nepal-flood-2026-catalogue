@@ -1,0 +1,665 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const description = "Nominate a publicly accessible search result, resource, and associated asset for review in the Nepal Public Data Catalogue.";
+const recipientEmail = "alexliaskos@geol.uoa.gr";
+const today = new Date().toISOString().slice(0, 10);
+
+const countries = [
+  "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria", "Azerbaijan",
+  "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi",
+  "Cabo Verde", "Cambodia", "Cameroon", "Canada", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Costa Rica", "Côte d’Ivoire", "Croatia", "Cuba", "Cyprus", "Czechia",
+  "Democratic Republic of the Congo", "Denmark", "Djibouti", "Dominica", "Dominican Republic",
+  "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia",
+  "Fiji", "Finland", "France", "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau", "Guyana",
+  "Haiti", "Honduras", "Hungary", "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy",
+  "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kiribati", "Kosovo", "Kuwait", "Kyrgyzstan",
+  "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania", "Luxembourg",
+  "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar",
+  "Namibia", "Nauru", "Nepal", "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Korea", "North Macedonia", "Norway",
+  "Oman", "Pakistan", "Palau", "Palestine", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal",
+  "Qatar", "Republic of the Congo", "Romania", "Russia", "Rwanda",
+  "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "San Marino", "São Tomé and Príncipe", "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands", "Somalia", "South Africa", "South Korea", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland", "Syria",
+  "Taiwan", "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia", "Türkiye", "Turkmenistan", "Tuvalu",
+  "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "Uruguay", "Uzbekistan",
+  "Vanuatu", "Vatican City", "Venezuela", "Vietnam", "Yemen", "Zambia", "Zimbabwe", "Other / not listed",
+];
+---
+
+<BaseLayout title="Nominate a resource" description={description}>
+  <header class="page-head page-head--compact nomination-head">
+    <div class="container">
+      <h1>Nominate a resource</h1>
+      <p class="lede">Submit one publicly accessible resource and its useful analysis-ready assets. The search information lets the review team reproduce where and how it was found.</p>
+
+      <div class="nomination-guide" aria-labelledby="nomination-guide-title">
+        <h2 id="nomination-guide-title">What you will provide</h2>
+        <ol>
+          <li><strong>Your details</strong><span>Academic identity and affiliation</span></li>
+          <li><strong>Search record</strong><span>Where and how you found it</span></li>
+          <li><strong>Resource record</strong><span>The coherent publication or dataset</span></li>
+          <li><strong>Asset records</strong><span>The useful files, layers, or endpoints</span></li>
+        </ol>
+      </div>
+    </div>
+  </header>
+
+  <section class="nomination-section">
+    <div class="container">
+      <form
+        id="nomination-form"
+        class="nomination-form"
+        action={`mailto:${recipientEmail}`}
+        method="post"
+        enctype="text/plain"
+        data-recipient={recipientEmail}
+      >
+        <p class="required-note"><span aria-hidden="true">*</span> Required field</p>
+
+        <fieldset id="submitter-details" class="form-section">
+          <legend>
+            <span class="section-number" aria-hidden="true">1</span>
+            <span>Your details<small>Who the review team may contact about this nomination.</small></span>
+          </legend>
+
+          <div class="form-grid">
+            <div class="form-field form-field--compact">
+              <label for="academic-title">Title <span class="required-mark" aria-hidden="true">*</span></label>
+              <select id="academic-title" name="academic_title" required>
+                <option value="">Select a title</option>
+                <option>Professor</option>
+                <option>Associate Professor</option>
+                <option>Assistant Professor</option>
+                <option>Dr</option>
+                <option>Mr</option>
+                <option>Ms</option>
+                <option>Mx</option>
+                <option>Prefer not to use a title</option>
+              </select>
+            </div>
+
+            <div class="form-field">
+              <label for="full-name">Full name <span class="required-mark" aria-hidden="true">*</span></label>
+              <input id="full-name" name="full_name" type="text" autocomplete="name" required />
+            </div>
+
+            <div class="form-field">
+              <label for="affiliation">Academic affiliation <span class="required-mark" aria-hidden="true">*</span></label>
+              <input id="affiliation" name="affiliation" type="text" autocomplete="organization" placeholder="University, institute, or research centre" required />
+            </div>
+
+            <div class="form-field">
+              <label for="country">Country <span class="required-mark" aria-hidden="true">*</span></label>
+              <select id="country" name="country" autocomplete="country-name" required>
+                <option value="">Select a country</option>
+                {countries.map((country) => <option value={country}>{country}</option>)}
+              </select>
+            </div>
+
+            <div class="form-field form-field--full">
+              <label for="academic-email">Academic email <span class="required-mark" aria-hidden="true">*</span></label>
+              <input id="academic-email" name="academic_email" type="email" inputmode="email" autocomplete="email" aria-describedby="academic-email-help academic-email-error" placeholder="name@university.edu" required />
+              <p id="academic-email-help" class="field-help">Use the address issued by your university or academic research institution. Personal email providers are not accepted.</p>
+              <p id="academic-email-error" class="field-error" hidden>Enter an institutional academic email address rather than a personal email account.</p>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset id="search-record" class="form-section">
+          <legend>
+            <span class="section-number" aria-hidden="true">2</span>
+            <span>Search record<small>Enough detail for the discovery route to be understood and repeated.</small></span>
+          </legend>
+
+          <div class="form-grid">
+            <div class="form-field form-field--full">
+              <label for="search-name">Search name <span class="required-mark" aria-hidden="true">*</span></label>
+              <input id="search-name" name="search_name" type="text" placeholder="A concise, descriptive name for this search" required />
+            </div>
+
+            <div class="form-field form-field--full">
+              <label for="search-aim">Search aim <span class="required-mark" aria-hidden="true">*</span></label>
+              <textarea id="search-aim" name="search_aim" rows="3" placeholder="State the precise evidence or data gap the search was intended to address." required></textarea>
+            </div>
+
+            <div class="form-field">
+              <label for="search-date">Search date <span class="required-mark" aria-hidden="true">*</span></label>
+              <input id="search-date" name="search_date" type="date" max={today} required />
+            </div>
+
+            <div class="form-field">
+              <label for="source-type">Source type <span class="required-mark" aria-hidden="true">*</span></label>
+              <select id="source-type" name="source_type" required>
+                <option value="">Select a source type</option>
+                <option>Scholarly index</option>
+                <option>Repository</option>
+                <option>Publisher website</option>
+                <option>Authoritative institutional source</option>
+                <option>Data catalogue</option>
+                <option>General web search</option>
+                <option>Other</option>
+              </select>
+            </div>
+
+            <div class="form-field">
+              <label for="source-interface">Source and interface <span class="required-mark" aria-hidden="true">*</span></label>
+              <input id="source-interface" name="source_interface" type="text" placeholder="For example, OpenAlex Works API" required />
+            </div>
+
+            <div class="form-field">
+              <label for="interface-url">Interface URL</label>
+              <input id="interface-url" name="interface_url" type="url" inputmode="url" placeholder="https://" />
+            </div>
+
+            <div class="form-field form-field--full">
+              <label for="exact-query">Exact query or search strategy <span class="required-mark" aria-hidden="true">*</span></label>
+              <textarea id="exact-query" name="exact_query" rows="4" placeholder="Copy the exact query, search terms, operators, parameters, and date limits used." required></textarea>
+            </div>
+
+            <div class="form-field form-field--full">
+              <label for="eligibility">Filters and eligibility criteria <span class="required-mark" aria-hidden="true">*</span></label>
+              <textarea id="eligibility" name="eligibility" rows="3" placeholder="Describe date, geography, language, access, inclusion, and exclusion criteria." required></textarea>
+            </div>
+
+            <div class="form-field form-field--full">
+              <label for="results-examined">Results examined <span class="required-mark" aria-hidden="true">*</span></label>
+              <textarea id="results-examined" name="results_examined" rows="3" placeholder="State which result pages, ranked records, API responses, or repository records you reviewed." required></textarea>
+            </div>
+
+            <div class="form-field form-field--full">
+              <label for="stopping-rule">Stopping rule <span class="required-mark" aria-hidden="true">*</span></label>
+              <textarea id="stopping-rule" name="stopping_rule" rows="3" placeholder="State the explicit point at which screening stopped." required></textarea>
+            </div>
+
+            <div class="form-field form-field--compact">
+              <label for="results-retrieved">Results retrieved <span class="required-mark" aria-hidden="true">*</span></label>
+              <input id="results-retrieved" name="results_retrieved" type="number" inputmode="numeric" min="0" step="1" required />
+            </div>
+
+            <div class="form-field">
+              <label for="search-notes">Search notes</label>
+              <textarea id="search-notes" name="search_notes" rows="2" placeholder="Optional context, duplicate handling, or limitations"></textarea>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset id="resource-record" class="form-section">
+          <legend>
+            <span class="section-number" aria-hidden="true">3</span>
+            <span>Resource record<small>The coherent dataset, report, manuscript, mapping product, service, or provider record.</small></span>
+          </legend>
+
+          <div class="form-grid">
+            <div class="form-field form-field--full">
+              <label for="resource-title">Resource title <span class="required-mark" aria-hidden="true">*</span></label>
+              <textarea id="resource-title" name="resource_title" rows="2" placeholder="Use the title shown by the canonical publisher or provider." required></textarea>
+            </div>
+
+            <div class="form-field form-field--full">
+              <label for="landing-url">Authoritative landing page <span class="required-mark" aria-hidden="true">*</span></label>
+              <input id="landing-url" name="landing_url" type="url" inputmode="url" placeholder="https://" required />
+              <p class="field-help">Use the canonical publisher, repository, or provider record—not a mirror or search-results page.</p>
+            </div>
+
+            <div class="form-field">
+              <label for="provider">Provider or publisher <span class="required-mark" aria-hidden="true">*</span></label>
+              <input id="provider" name="provider" type="text" required />
+            </div>
+
+            <div class="form-field">
+              <label for="resource-type">Resource type <span class="required-mark" aria-hidden="true">*</span></label>
+              <select id="resource-type" name="resource_type" required>
+                <option value="">Select a resource type</option>
+                <option>Dataset</option>
+                <option>Report</option>
+                <option>Scholarly manuscript or preprint</option>
+                <option>Mapping product</option>
+                <option>Service or API</option>
+                <option>Provider record</option>
+                <option>Other</option>
+              </select>
+            </div>
+
+            <div class="form-field">
+              <label for="evidence-class">Classification <span class="required-mark" aria-hidden="true">*</span></label>
+              <select id="evidence-class" name="evidence_class" required>
+                <option value="">Select a classification</option>
+                <option>Event observation</option>
+                <option>Event analysis</option>
+                <option>Multi-source event analysis</option>
+                <option>Pre-event baseline</option>
+                <option>Post-event assessment</option>
+                <option>Method or analytical tool</option>
+                <option>Authoritative reference</option>
+                <option>Other</option>
+              </select>
+            </div>
+
+            <div class="form-field">
+              <label for="primary-theme">Primary theme <span class="required-mark" aria-hidden="true">*</span></label>
+              <select id="primary-theme" name="primary_theme" required>
+                <option value="">Select a theme</option>
+                <option>Cryosphere</option>
+                <option>Hydrology</option>
+                <option>Geomorphology</option>
+                <option>Remote sensing</option>
+                <option>Meteorology</option>
+                <option>Early warning</option>
+                <option>Disaster impacts</option>
+                <option>Infrastructure</option>
+                <option>Transport and roads</option>
+                <option>Settlements and population</option>
+                <option>Land cover</option>
+                <option>Elevation and topography</option>
+                <option>Administrative boundaries</option>
+                <option>Other</option>
+              </select>
+            </div>
+
+            <div class="form-field form-field--full">
+              <label for="resource-description">Description <span class="required-mark" aria-hidden="true">*</span></label>
+              <textarea id="resource-description" name="resource_description" rows="4" placeholder="Explain what the resource contains and how it may support analysis of the event." required></textarea>
+            </div>
+
+            <div class="form-field form-field--full">
+              <label for="geographic-scope">Geographic coverage <span class="required-mark" aria-hidden="true">*</span></label>
+              <textarea id="geographic-scope" name="geographic_scope" rows="2" placeholder="State whether coverage is global, national, regional, or site-specific, and name the area." required></textarea>
+            </div>
+
+            <div class="form-field">
+              <label for="resource-temporal-role">Temporal role <span class="required-mark" aria-hidden="true">*</span></label>
+              <select id="resource-temporal-role" name="resource_temporal_role" required>
+                <option value="">Select a temporal role</option>
+                <option>Pre-event baseline</option>
+                <option>Event</option>
+                <option>Post-event</option>
+                <option>Event analysis</option>
+                <option>Multi-temporal</option>
+                <option>Timeless reference</option>
+              </select>
+            </div>
+
+            <div class="form-field">
+              <label for="access-tier">Public access <span class="required-mark" aria-hidden="true">*</span></label>
+              <select id="access-tier" name="access_tier" required>
+                <option value="">Select an access route</option>
+                <option>Direct open access</option>
+                <option>Open access with free registration</option>
+                <option>Public interactive service</option>
+                <option>Public metadata with direct asset links</option>
+              </select>
+            </div>
+
+            <div class="form-field">
+              <label for="licence-status">Licence <span class="required-mark" aria-hidden="true">*</span></label>
+              <select id="licence-status" name="licence_status" required>
+                <option value="">Select the stated licence status</option>
+                <option>CC0-1.0</option>
+                <option>CC-BY-4.0</option>
+                <option>CC-BY-SA-4.0</option>
+                <option>Other stated open licence</option>
+                <option>Public domain</option>
+                <option>Not stated after checking</option>
+              </select>
+            </div>
+
+            <div class="form-field">
+              <label for="publication-date">Publication date</label>
+              <input id="publication-date" name="publication_date" type="date" max={today} />
+            </div>
+
+            <div class="form-field">
+              <label for="persistent-identifier">DOI or persistent identifier</label>
+              <input id="persistent-identifier" name="persistent_identifier" type="text" placeholder="DOI, Handle, accession, or catalogue ID" />
+            </div>
+
+            <div class="form-field">
+              <label for="resource-language">Language</label>
+              <input id="resource-language" name="resource_language" type="text" placeholder="For example, English or Nepali" />
+            </div>
+
+            <div class="form-field form-field--full">
+              <label for="additional-themes">Additional themes</label>
+              <input id="additional-themes" name="additional_themes" type="text" placeholder="Separate additional themes with semicolons" />
+            </div>
+
+            <div class="form-field form-field--full">
+              <label for="resource-methods">Methods, validation, uncertainty, or limitations</label>
+              <textarea id="resource-methods" name="resource_methods" rows="4" placeholder="Include only details established from the resource or its authoritative metadata."></textarea>
+            </div>
+
+            <div class="form-field form-field--full">
+              <label for="metadata-evidence">Additional metadata or evidence URLs</label>
+              <textarea id="metadata-evidence" name="metadata_evidence" rows="2" placeholder="One authoritative URL per line"></textarea>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset id="asset-records" class="form-section">
+          <legend>
+            <span class="section-number" aria-hidden="true">4</span>
+            <span>Asset records<small>Add only useful files, layers, scenes, archives, tables, or service endpoints—not area-of-interest files or incidental metadata.</small></span>
+          </legend>
+
+          <div id="asset-record-list" class="asset-record-list" aria-live="polite"></div>
+
+          <button id="add-asset" class="button--quiet add-asset-button" type="button">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"></path></svg>
+            Add another asset
+          </button>
+
+          <noscript><p class="noscript-note">JavaScript is required to add asset records and prepare the nomination email. You may instead email <a href={`mailto:${recipientEmail}`}>{recipientEmail}</a>.</p></noscript>
+        </fieldset>
+
+        <div class="submission-confirmation">
+          <label class="check-field" for="public-confirmation">
+            <input id="public-confirmation" name="public_confirmation" type="checkbox" required />
+            <span>I confirm that this nomination concerns publicly accessible material and that the information can be checked against the authoritative pages cited above. <span class="required-mark" aria-hidden="true">*</span></span>
+          </label>
+
+          <div class="submit-row">
+            <div>
+              <p id="form-progress" class="form-progress" aria-live="polite">Complete the required fields to enable submission.</p>
+              <p class="submission-note">Selecting “Send nomination” opens your email application with a structured message addressed to <a href={`mailto:${recipientEmail}`}>{recipientEmail}</a>. The catalogue does not store the form data.</p>
+            </div>
+            <button id="submit-nomination" type="submit" disabled>Send nomination</button>
+          </div>
+          <p id="submission-status" class="submission-status" role="status" aria-live="polite" hidden></p>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <template id="asset-record-template">
+    <article class="asset-entry" data-asset-entry>
+      <div class="asset-entry-heading">
+        <div><h3>Asset <span data-asset-number></span></h3><p>Describe one analysis-ready item belonging to the resource.</p></div>
+        <button class="button--quiet remove-asset-button" type="button" data-remove-asset hidden>Remove asset</button>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-field form-field--full">
+          <label data-label-for="title">Asset title <span class="required-mark" aria-hidden="true">*</span></label>
+          <textarea data-asset-field="title" name="asset_title[]" rows="2" required></textarea>
+        </div>
+        <div class="form-field form-field--full">
+          <label data-label-for="url">Direct file, layer, or endpoint URL <span class="required-mark" aria-hidden="true">*</span></label>
+          <input data-asset-field="url" name="asset_url[]" type="url" inputmode="url" placeholder="https://" required />
+        </div>
+        <div class="form-field">
+          <label data-label-for="type">Asset type <span class="required-mark" aria-hidden="true">*</span></label>
+          <select data-asset-field="type" name="asset_type[]" required>
+            <option value="">Select an asset type</option>
+            <option>Raster data</option><option>Vector data</option><option>Tabular data</option><option>Satellite scene</option><option>Map</option><option>Manuscript or report</option><option>Archive</option><option>Web service or API endpoint</option><option>Code or notebook</option><option>Other</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label data-label-for="format">File format <span class="required-mark" aria-hidden="true">*</span></label>
+          <input data-asset-field="format" name="asset_format[]" type="text" placeholder="For example, GeoTIFF, CSV, PDF, or WMS" required />
+        </div>
+        <div class="form-field">
+          <label data-label-for="temporal-role">Temporal role <span class="required-mark" aria-hidden="true">*</span></label>
+          <select data-asset-field="temporal-role" name="asset_temporal_role[]" required>
+            <option value="">Select a temporal role</option><option>Pre-event baseline</option><option>Event</option><option>Post-event</option><option>Event analysis</option><option>Multi-temporal</option><option>Timeless reference</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label data-label-for="access">Public access <span class="required-mark" aria-hidden="true">*</span></label>
+          <select data-asset-field="access" name="asset_access[]" required>
+            <option value="">Select an access route</option><option>Direct download</option><option>Open access with free registration</option><option>Public service endpoint</option><option>Interactive viewer with export</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label data-label-for="coverage-type">Coverage type <span class="required-mark" aria-hidden="true">*</span></label>
+          <select data-asset-field="coverage-type" name="asset_coverage_type[]" required>
+            <option value="">Select coverage</option><option>Global</option><option>National</option><option>Regional</option><option>Site-specific</option><option>Non-spatial</option><option>Not stated by provider</option>
+          </select>
+        </div>
+        <div class="form-field form-field--full">
+          <label data-label-for="coverage">Coverage or bounding box <span class="required-mark" aria-hidden="true">*</span></label>
+          <textarea data-asset-field="coverage" name="asset_coverage[]" rows="2" placeholder="Name the area first. Add WGS 84 west, south, east, north coordinates when available; write “Not applicable” for a non-spatial asset." required></textarea>
+        </div>
+        <div class="form-field"><label data-label-for="host">Host or provider</label><input data-asset-field="host" name="asset_host[]" type="text" /></div>
+        <div class="form-field"><label data-label-for="size">File size</label><input data-asset-field="size" name="asset_size[]" type="text" placeholder="For example, 42.6 MB" /></div>
+        <div class="form-field"><label data-label-for="crs">CRS</label><input data-asset-field="crs" name="asset_crs[]" type="text" placeholder="For example, EPSG:4326" /></div>
+        <div class="form-field"><label data-label-for="resolution">Spatial resolution</label><input data-asset-field="resolution" name="asset_resolution[]" type="text" placeholder="For example, 10 m" /></div>
+        <div class="form-field"><label data-label-for="temporal-start">Temporal start</label><input data-asset-field="temporal-start" name="asset_temporal_start[]" type="date" /></div>
+        <div class="form-field"><label data-label-for="temporal-end">Temporal end</label><input data-asset-field="temporal-end" name="asset_temporal_end[]" type="date" /></div>
+        <div class="form-field form-field--full"><label data-label-for="rights">Licence or rights statement</label><input data-asset-field="rights" name="asset_rights[]" type="text" placeholder="Identify only what the provider states; otherwise write “Not stated”." /></div>
+        <div class="form-field form-field--full"><label data-label-for="evidence">Authoritative evidence URL</label><input data-asset-field="evidence" name="asset_evidence[]" type="url" inputmode="url" placeholder="https://" /></div>
+        <div class="form-field form-field--full"><label data-label-for="notes">Methods, provenance, uncertainty, or limitations</label><textarea data-asset-field="notes" name="asset_notes[]" rows="3" placeholder="Optional verified details that help a future analyst understand and use this asset."></textarea></div>
+      </div>
+    </article>
+  </template>
+
+  <script>
+    const form = document.querySelector<HTMLFormElement>("#nomination-form");
+    const assetList = document.querySelector<HTMLElement>("#asset-record-list");
+    const assetTemplate = document.querySelector<HTMLTemplateElement>("#asset-record-template");
+    const addAssetButton = document.querySelector<HTMLButtonElement>("#add-asset");
+    const submitButton = document.querySelector<HTMLButtonElement>("#submit-nomination");
+    const progress = document.querySelector<HTMLElement>("#form-progress");
+    const submissionStatus = document.querySelector<HTMLElement>("#submission-status");
+    const academicEmail = document.querySelector<HTMLInputElement>("#academic-email");
+    const academicEmailError = document.querySelector<HTMLElement>("#academic-email-error");
+    const personalEmailDomains = new Set(["aol.com", "fastmail.com", "gmail.com", "gmx.com", "gmx.de", "hotmail.com", "icloud.com", "live.com", "mail.com", "me.com", "outlook.com", "pm.me", "proton.me", "protonmail.com", "yahoo.com", "yahoo.co.uk", "yandex.com", "zoho.com"]);
+    let assetSerial = 0;
+
+    function isAcademicEmail(value: string) {
+      const domain = value.trim().toLocaleLowerCase("en").split("@").at(-1) ?? "";
+      return domain.includes(".") && !personalEmailDomains.has(domain);
+    }
+
+    function validateAcademicEmail(showMessage = false) {
+      if (!academicEmail || !academicEmailError) return true;
+      const hasValue = academicEmail.value.trim().length > 0;
+      const valid = !hasValue || (!academicEmail.validity.typeMismatch && isAcademicEmail(academicEmail.value));
+      academicEmail.setCustomValidity(valid ? "" : "Use an institutional academic email address.");
+      academicEmailError.hidden = !(showMessage && hasValue && !valid);
+      return valid;
+    }
+
+    function controlIsComplete(control: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement) {
+      if (control instanceof HTMLInputElement && control.type === "checkbox") return control.checked;
+      return control.value.trim().length > 0 && control.validity.valid;
+    }
+
+    function updateCompletion() {
+      if (!form || !submitButton || !progress) return;
+      validateAcademicEmail(false);
+      const requiredControls = [...form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("[required]")];
+      const remaining = requiredControls.filter((control) => !controlIsComplete(control)).length;
+      submitButton.disabled = remaining > 0;
+      progress.textContent = remaining === 0 ? "All required fields are complete. Your nomination is ready to send." : `${remaining} required ${remaining === 1 ? "field remains" : "fields remain"}.`;
+    }
+
+    function markControl(control: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement) {
+      control.toggleAttribute("aria-invalid", control.required && !controlIsComplete(control));
+    }
+
+    function bindControl(control: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement) {
+      if (control.dataset.nominationBound === "true") return;
+      control.dataset.nominationBound = "true";
+      control.addEventListener("input", () => {
+        if (control === academicEmail) validateAcademicEmail(control.value.includes("@"));
+        if (controlIsComplete(control)) control.removeAttribute("aria-invalid");
+        updateCompletion();
+      });
+      control.addEventListener("change", () => { markControl(control); updateCompletion(); });
+      control.addEventListener("blur", () => {
+        if (control === academicEmail) validateAcademicEmail(true);
+        markControl(control);
+        updateCompletion();
+      });
+    }
+
+    function renumberAssets() {
+      if (!assetList) return;
+      const entries = [...assetList.querySelectorAll<HTMLElement>("[data-asset-entry]")];
+      entries.forEach((entry, index) => {
+        const number = entry.querySelector<HTMLElement>("[data-asset-number]");
+        const removeButton = entry.querySelector<HTMLButtonElement>("[data-remove-asset]");
+        if (number) number.textContent = String(index + 1);
+        if (removeButton) removeButton.hidden = entries.length === 1;
+      });
+    }
+
+    function addAsset(focus = true) {
+      if (!assetList || !assetTemplate) return;
+      assetSerial += 1;
+      const entry = assetTemplate.content.firstElementChild?.cloneNode(true) as HTMLElement | undefined;
+      if (!entry) return;
+      const controls = [...entry.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("[data-asset-field]")];
+      for (const control of controls) {
+        const field = control.dataset.assetField;
+        if (!field) continue;
+        const id = `asset-${assetSerial}-${field}`;
+        control.id = id;
+        const label = entry.querySelector<HTMLLabelElement>(`[data-label-for="${field}"]`);
+        if (label) label.htmlFor = id;
+        bindControl(control);
+      }
+      entry.querySelector<HTMLButtonElement>("[data-remove-asset]")?.addEventListener("click", () => {
+        entry.remove();
+        renumberAssets();
+        updateCompletion();
+      });
+      assetList.append(entry);
+      renumberAssets();
+      updateCompletion();
+      if (focus) controls[0]?.focus();
+    }
+
+    function selectedText(control: HTMLSelectElement) {
+      return control.selectedOptions[0]?.textContent?.trim() ?? "";
+    }
+
+    function formValue(name: string) {
+      if (!form) return "";
+      const control = form.elements.namedItem(name);
+      if (control instanceof HTMLSelectElement) return selectedText(control);
+      if (control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement) return control.value.trim();
+      return "";
+    }
+
+    function assetValue(entry: HTMLElement, field: string) {
+      const control = entry.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(`[data-asset-field="${field}"]`);
+      if (control instanceof HTMLSelectElement) return selectedText(control);
+      return control?.value.trim() ?? "";
+    }
+
+    function appendFields(lines: string[], fields: Array<[string, string]>) {
+      for (const [label, value] of fields) if (value) lines.push(`${label}: ${value}`);
+    }
+
+    function buildEmailBody() {
+      const lines: string[] = ["NEPAL PUBLIC DATA CATALOGUE NOMINATION", "", "SUBMITTER"];
+      appendFields(lines, [["Title", formValue("academic_title")], ["Name", formValue("full_name")], ["Affiliation", formValue("affiliation")], ["Country", formValue("country")], ["Academic email", formValue("academic_email")]]);
+      lines.push("", "SEARCH RECORD");
+      appendFields(lines, [["Search name", formValue("search_name")], ["Aim", formValue("search_aim")], ["Search date", formValue("search_date")], ["Source type", formValue("source_type")], ["Source and interface", formValue("source_interface")], ["Interface URL", formValue("interface_url")], ["Exact query or strategy", formValue("exact_query")], ["Filters and eligibility criteria", formValue("eligibility")], ["Results examined", formValue("results_examined")], ["Stopping rule", formValue("stopping_rule")], ["Results retrieved", formValue("results_retrieved")], ["Notes", formValue("search_notes")]]);
+      lines.push("", "RESOURCE RECORD");
+      appendFields(lines, [["Title", formValue("resource_title")], ["Authoritative landing page", formValue("landing_url")], ["Provider or publisher", formValue("provider")], ["Resource type", formValue("resource_type")], ["Classification", formValue("evidence_class")], ["Primary theme", formValue("primary_theme")], ["Description", formValue("resource_description")], ["Geographic coverage", formValue("geographic_scope")], ["Temporal role", formValue("resource_temporal_role")], ["Public access", formValue("access_tier")], ["Licence", formValue("licence_status")], ["Publication date", formValue("publication_date")], ["DOI or persistent identifier", formValue("persistent_identifier")], ["Language", formValue("resource_language")], ["Additional themes", formValue("additional_themes")], ["Methods, validation, uncertainty, or limitations", formValue("resource_methods")], ["Additional metadata or evidence URLs", formValue("metadata_evidence")]]);
+      const entries = assetList ? [...assetList.querySelectorAll<HTMLElement>("[data-asset-entry]")] : [];
+      entries.forEach((entry, index) => {
+        lines.push("", `ASSET RECORD ${index + 1}`);
+        appendFields(lines, [["Title", assetValue(entry, "title")], ["Direct URL", assetValue(entry, "url")], ["Asset type", assetValue(entry, "type")], ["File format", assetValue(entry, "format")], ["Temporal role", assetValue(entry, "temporal-role")], ["Public access", assetValue(entry, "access")], ["Coverage type", assetValue(entry, "coverage-type")], ["Coverage or bounding box", assetValue(entry, "coverage")], ["Host or provider", assetValue(entry, "host")], ["File size", assetValue(entry, "size")], ["CRS", assetValue(entry, "crs")], ["Spatial resolution", assetValue(entry, "resolution")], ["Temporal start", assetValue(entry, "temporal-start")], ["Temporal end", assetValue(entry, "temporal-end")], ["Licence or rights statement", assetValue(entry, "rights")], ["Authoritative evidence URL", assetValue(entry, "evidence")], ["Methods, provenance, uncertainty, or limitations", assetValue(entry, "notes")]]);
+      });
+      lines.push("", "CONFIRMATION", "Publicly accessible material and authoritative evidence confirmed: Yes");
+      return lines.join("\n");
+    }
+
+    if (form && assetList && assetTemplate && addAssetButton && submitButton) {
+      addAsset(false);
+      form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("input, select, textarea").forEach(bindControl);
+      addAssetButton.addEventListener("click", () => addAsset(true));
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        validateAcademicEmail(true);
+        const requiredControls = [...form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("[required]")];
+        requiredControls.forEach(markControl);
+        if (!form.checkValidity()) {
+          requiredControls.find((control) => !controlIsComplete(control))?.focus();
+          updateCompletion();
+          return;
+        }
+        const recipient = form.dataset.recipient ?? "";
+        const subject = `Catalogue nomination: ${formValue("resource_title")}`;
+        const mailto = `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(buildEmailBody())}`;
+        if (submissionStatus) {
+          submissionStatus.hidden = false;
+          submissionStatus.textContent = "Your email application is opening. Review the prepared message and select Send there to complete the nomination.";
+        }
+        window.location.href = mailto;
+      });
+      updateCompletion();
+    }
+  </script>
+
+  <style>
+    .nomination-head { padding-bottom: clamp(2.4rem, 4vw, 3.2rem); }
+    .nomination-guide { max-width: 64rem; margin-top: clamp(2rem, 4vw, 3rem); border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); padding-block: 1.15rem 1.3rem; }
+    .nomination-guide h2 { margin-bottom: 0.85rem; font-family: var(--sans); font-size: 0.82rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+    .nomination-guide ol { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; margin: 0; padding: 0; counter-reset: nomination-steps; list-style: none; }
+    .nomination-guide li { min-width: 0; counter-increment: nomination-steps; }
+    .nomination-guide strong { display: flex; align-items: baseline; gap: 0.45rem; color: var(--ink); font-size: 0.94rem; }
+    .nomination-guide strong::before { content: counter(nomination-steps); color: var(--teal-dark); font-variant-numeric: tabular-nums; }
+    .nomination-guide span { display: block; margin-top: 0.15rem; color: var(--ink-soft); font-size: 0.83rem; line-height: 1.38; }
+    .nomination-section { padding: 0 0 clamp(4rem, 8vw, 7rem); }
+    .nomination-form { max-width: 64rem; }
+    .required-note { margin: 0 0 1.5rem; color: var(--ink-soft); font-size: 0.86rem; }
+    .required-note span, .required-mark { color: var(--teal-dark); font-weight: 700; }
+    .form-section { min-width: 0; margin: 0; border: 0; border-top: 2px solid var(--ink); padding: clamp(1.6rem, 3vw, 2.25rem) 0 clamp(3rem, 6vw, 4.5rem); scroll-margin-top: 2rem; }
+    .form-section legend { display: flex; align-items: flex-start; gap: 0.9rem; width: 100%; margin: 0 0 1.8rem; padding: 0; color: var(--ink); font-family: var(--serif); font-size: clamp(1.45rem, 2.3vw, 1.85rem); font-weight: 570; line-height: 1.2; }
+    .form-section legend small { display: block; max-width: 62ch; margin-top: 0.32rem; color: var(--ink-soft); font-family: var(--sans); font-size: 0.92rem; font-weight: 400; line-height: 1.45; }
+    .section-number { display: inline-grid; flex: 0 0 2rem; width: 2rem; height: 2rem; place-items: center; border: 1px solid var(--rule-strong); background: var(--teal-pale); color: var(--teal-dark); font-family: var(--sans); font-size: 0.88rem; font-variant-numeric: tabular-nums; font-weight: 700; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem 1.4rem; }
+    .form-field { min-width: 0; }
+    .form-field--full { grid-column: 1 / -1; }
+    .form-field--compact { max-width: 22rem; }
+    .form-field label { display: block; margin-bottom: 0.35rem; color: var(--ink); font-size: 0.9rem; font-weight: 650; line-height: 1.35; }
+    .form-field input, .form-field select, .form-field textarea { width: 100%; min-width: 0; min-height: 2.85rem; border: 1px solid var(--rule-strong); border-radius: 0.15rem; background-color: var(--surface); color: var(--ink); caret-color: var(--teal-dark); font: inherit; line-height: 1.45; padding: 0.62rem 0.72rem; }
+    .form-field select { appearance: none; padding-right: 2.6rem; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none' stroke='%23195c5b' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m3.5 6 4.5 4.5L12.5 6'/%3E%3C/svg%3E"); background-position: right 0.72rem center; background-repeat: no-repeat; background-size: 1rem; }
+    .form-field textarea { min-height: 5.5rem; overflow-wrap: anywhere; resize: vertical; }
+    .form-field input:hover, .form-field select:hover, .form-field textarea:hover { border-color: var(--teal); }
+    .form-field input:focus, .form-field select:focus, .form-field textarea:focus { border-color: var(--teal-dark); }
+    .form-field input[aria-invalid="true"], .form-field select[aria-invalid="true"], .form-field textarea[aria-invalid="true"] { border-color: var(--amber-dark); background-color: var(--amber-pale); }
+    .form-field input::placeholder, .form-field textarea::placeholder { color: #6d7c84; opacity: 1; }
+    .field-help, .field-error { max-width: 70ch; margin: 0.38rem 0 0; color: var(--ink-soft); font-size: 0.82rem; line-height: 1.4; }
+    .field-error { color: var(--amber-dark); font-weight: 600; }
+    .asset-record-list { display: grid; gap: 2.75rem; }
+    .asset-entry { min-width: 0; border-top: 1px solid var(--rule-strong); padding-top: 1.4rem; }
+    .asset-entry:first-child { border-top: 0; padding-top: 0; }
+    .asset-entry-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.4rem; }
+    .asset-entry-heading h3 { font-size: 1.2rem; }
+    .asset-entry-heading p { margin: 0.2rem 0 0; color: var(--ink-soft); font-size: 0.86rem; }
+    .remove-asset-button { min-height: 2.3rem; flex: 0 0 auto; padding: 0.38rem 0.65rem; font-size: 0.82rem; }
+    .add-asset-button { margin-top: 1.6rem; }
+    .add-asset-button svg { width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-linecap: round; stroke-width: 1.7; }
+    .noscript-note { margin-top: 1rem; color: var(--amber-dark); }
+    .submission-confirmation { border-top: 2px solid var(--ink); padding-top: 1.6rem; }
+    .check-field { display: grid; grid-template-columns: 1.15rem minmax(0, 1fr); align-items: start; gap: 0.72rem; max-width: 70ch; cursor: pointer; line-height: 1.48; }
+    .check-field input { width: 1.15rem; height: 1.15rem; min-height: 0; margin: 0.18rem 0 0; padding: 0; accent-color: var(--teal-dark); }
+    .submit-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 2rem; margin-top: 2rem; border-top: 1px solid var(--rule); padding-top: 1.5rem; }
+    .form-progress { margin: 0 0 0.3rem; color: var(--ink); font-weight: 650; }
+    .submission-note { max-width: 70ch; margin: 0; color: var(--ink-soft); font-size: 0.84rem; line-height: 1.45; overflow-wrap: anywhere; }
+    #submit-nomination { min-width: 10.5rem; }
+    #submit-nomination:disabled { border-color: var(--rule-strong); background: var(--surface-muted); color: #728087; cursor: not-allowed; }
+    .submission-status { margin: 1.2rem 0 0; border: 1px solid var(--teal); background: var(--teal-pale); color: var(--ink); padding: 0.75rem 0.85rem; font-size: 0.9rem; }
+
+    @media (max-width: 50rem) {
+      .nomination-guide ol, .form-grid { grid-template-columns: 1fr; }
+      .form-field--full { grid-column: auto; }
+      .form-field--compact { max-width: none; }
+      .nomination-guide ol { gap: 0.85rem; }
+      .nomination-guide li { border-top: 1px solid var(--rule); padding-top: 0.7rem; }
+      .nomination-guide li:first-child { border-top: 0; padding-top: 0; }
+      .submit-row { grid-template-columns: 1fr; align-items: stretch; gap: 1.2rem; }
+      #submit-nomination { width: 100%; }
+    }
+
+    @media (max-width: 32rem) {
+      .form-section legend, .asset-entry-heading { align-items: flex-start; flex-direction: column; }
+      .remove-asset-button { align-self: flex-start; }
+    }
+  </style>
+</BaseLayout>

@@ -1,0 +1,663 @@
+---
+import { getAssetReviews, canOpenReviewedAsset, reviewedAssetAccessLabel } from "../../lib/asset-review";
+import { getResourceAssessments, getAssessmentLedger, type AssessmentResource, type AssessmentAsset } from "../../lib/assessment";
+import AssessmentDecision from "../../components/AssessmentDecision.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import MapExtentButton from "../../components/MapExtentButton.astro";
+import MapExtentModal from "../../components/MapExtentModal.astro";
+import { getPublicData } from "../../lib/data";
+import {
+  fieldState,
+  formatDate,
+  formatDateRange,
+  humanize,
+  licenceStatement,
+  splitValues,
+  withBase,
+  extractBaseLayerName,
+  cleanScientificTitle,
+  fileFormatLabel,
+} from "../../lib/format";
+import type { Asset, Resource } from "../../lib/types";
+
+export async function getStaticPaths() {
+  const [{ resources, assets }, ledger] = await Promise.all([getPublicData(), getAssessmentLedger()]);
+  const includedIds = new Set(resources.map((resource) => resource.resource_id));
+  return [
+    ...resources.map((resource) => ({
+      params: { resource_id: resource.resource_id },
+      props: { resource, assets: assets.filter((asset) => asset.resource_id === resource.resource_id) },
+    })),
+    ...ledger.resources.filter((row) => row.eligibility_outcome !== "include" && !includedIds.has(row.resource_id)).map((excludedAssessment) => ({
+      params: { resource_id: excludedAssessment.resource_id },
+      props: { excludedAssessment, assessmentAssets: ledger.assets.filter((asset) => asset.resource_id === excludedAssessment.resource_id) },
+    })),
+  ];
+}
+
+interface Props {
+  resource?: Resource;
+  assets?: Asset[];
+  excludedAssessment?: AssessmentResource;
+  assessmentAssets?: AssessmentAsset[];
+}
+
+const { resource, assets = [], excludedAssessment, assessmentAssets = [] } = Astro.props;
+async function includedDetails(resource: Resource, assets: Asset[]) {
+const assessment = (await getResourceAssessments()).find((entry) => entry.resource_id === resource.resource_id);
+const assetReview = await getAssetReviews();
+const sources = splitValues(resource.metadata_source_urls);
+const languageNames = new Intl.DisplayNames(["en"], { type: "language" });
+const originalLanguage = languageNames.of(resource.title_language) ?? resource.title_language;
+const hasDistinctOriginalTitle = resource.title_original !== resource.canonical_title;
+const isDataset = /dataset|imagery|layer|service|api/i.test(resource.resource_type);
+const pageUrl = new URL(withBase(`resources/${resource.resource_id}/`), Astro.site).toString();
+const resourceLicence = licenceStatement(
+  resource.license_spdx,
+  resource.license_url,
+  resource.license_spdx || resource.license_url ? "confirmed" : "not_verified",
+);
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": isDataset ? "Dataset" : "CreativeWork",
+  name: resource.canonical_title,
+  description: resource.description,
+  url: pageUrl,
+  sameAs: resource.landing_url,
+  creator: { "@type": "Organization", name: resource.provider },
+  inLanguage: resource.language,
+  license: resource.license_url ?? undefined,
+  datePublished: resource.publication_date ?? undefined,
+  dateModified: resource.last_updated ?? undefined,
+};
+
+const groupedAssets = new Map<string, Asset[]>();
+for (const asset of assets) {
+  const { baseTitle } = extractBaseLayerName(asset.title);
+  if (!groupedAssets.has(baseTitle)) {
+    groupedAssets.set(baseTitle, []);
+  }
+  groupedAssets.get(baseTitle)!.push(asset);
+}
+
+const consolidatedAssets = [...groupedAssets.entries()].map(([baseTitle, groupAssets]) => {
+  const first = groupAssets[0];
+  const cleanTitle = cleanScientificTitle(baseTitle);
+  const formats = groupAssets.map((a) => {
+    const { formatLabel } = extractBaseLayerName(a.title);
+    return {
+      format: a.file_format,
+      label: formatLabel || fileFormatLabel(a.file_format) || a.file_format || "Data",
+      size: a.size_as_shown,
+      url: a.asset_url,
+      assetId: a.asset_id,
+      href: withBase(`assets/${a.asset_id}/`),
+      canOpen: canOpenReviewedAsset(assetReview.byId.get(a.asset_id)),
+      accessLabel: assetReview.byId.has(a.asset_id) ? reviewedAssetAccessLabel(assetReview.byId.get(a.asset_id)!) : "Access not verified",
+    };
+  });
+
+  const coverage = first.bbox_wgs84
+    ? `WGS 84 bounding box: ${first.bbox_wgs84}`
+    : resource.geographic_scope
+      ? `Asset bounding box not stated. Parent resource coverage: ${resource.geographic_scope}`
+      : "Asset bounding box not stated.";
+
+  const hasFollowUp = groupAssets.some((a) => assetReview.byId.get(a.asset_id)?.needs_follow_up);
+
+  return {
+    baseTitle,
+    cleanTitle,
+    firstAsset: first,
+    groupAssets,
+    formats,
+    coverage,
+    hasFollowUp,
+  };
+});
+return { assessment, assetReview, sources, languageNames, originalLanguage, hasDistinctOriginalTitle, isDataset, pageUrl, resourceLicence, jsonLd, groupedAssets, consolidatedAssets };
+}
+const details = resource ? await includedDetails(resource, assets) : null;
+const { assessment, assetReview, sources, languageNames, originalLanguage, hasDistinctOriginalTitle, isDataset, pageUrl, resourceLicence, jsonLd, groupedAssets, consolidatedAssets } = details ?? ({} as Awaited<ReturnType<typeof includedDetails>>);
+---
+
+{excludedAssessment ? <AssessmentDecision assessment={excludedAssessment} assets={assessmentAssets} /> : resource && <BaseLayout title={resource.canonical_title} description={resource.description} jsonLd={jsonLd}>
+  <header class="page-head page-head--compact resource-head">
+    <div class="container resource-container">
+      <p class="back-link">
+        <a href={withBase("resources/")}>
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M14 8H2.5M7 3.5 2.5 8 7 12.5"></path>
+          </svg>
+          <span>Back to resources</span>
+        </a>
+      </p>
+      <h1>{resource.canonical_title}</h1>
+      {hasDistinctOriginalTitle && (
+        <p class="original-title">
+          <span>Original title</span>
+          <span lang={resource.title_language}>{resource.title_original}</span>
+        </p>
+      )}
+      <p class="resource-description">{resource.description}</p>
+      <dl class="resource-summary">
+        <div>
+          <dt>Status</dt>
+          <dd><span class="status-badge status-badge--reviewed">{fieldState(resource.current_status)}</span></dd>
+        </div>
+        <div>
+          <dt>Provider</dt>
+          <dd>{resource.provider}</dd>
+        </div>
+        <div>
+          <dt>Resource type</dt>
+          <dd>{humanize(resource.resource_type)}</dd>
+        </div>
+        <div>
+          <dt>Evidence class</dt>
+          <dd>{humanize(resource.evidence_class)}</dd>
+        </div>
+      </dl>
+    </div>
+  </header>
+
+  <article class="resource-page">
+    <div class="container resource-container">
+      {assessment && <section class="detail-section">
+        <h2>Completed catalogue assessment</h2>
+        <dl class="detail-list">
+          <div><dt>Eligibility decision</dt><dd>{fieldState(assessment.eligibility_outcome)} · {humanize(assessment.specific_decision)}</dd></div>
+          <div><dt>Assessment date</dt><dd>{formatDate(assessment.assessment_date)}</dd></div>
+          <div><dt>Decision reason</dt><dd>{assessment.reason}</dd></div>
+          {assessment.metadata_corrections && <div><dt>Metadata corrections</dt><dd>{assessment.metadata_corrections}</dd></div>}
+        </dl>
+        {assessment.source_evidence.length > 0 && <ul class="sources-list">
+          {assessment.source_evidence.map((source) => <li>{/^https?:\/\//.test(source) ? <a href={source} rel="noreferrer">{source}</a> : source}</li>)}
+        </ul>}
+        <p><a href={withBase("assessment/")}>View the complete assessment and exclusion ledger</a>.</p>
+      </section>}
+      <section class="detail-section">
+        <h2>Identity and coverage</h2>
+        <dl class="detail-list">
+          <div><dt>Catalogue identifier</dt><dd>{resource.resource_id}</dd></div>
+          {hasDistinctOriginalTitle && <div><dt>Original-title language</dt><dd>{originalLanguage}</dd></div>}
+          {hasDistinctOriginalTitle && <div><dt>English-title status</dt><dd>{fieldState(resource.translation_status)}</dd></div>}
+          <div><dt>Persistent identifier</dt><dd>{resource.persistent_identifier || "Not stated"}</dd></div>
+          <div><dt>Resource version</dt><dd>{resource.resource_version || "Not stated"}</dd></div>
+          <div><dt>Publication date</dt><dd>{formatDate(resource.publication_date)}</dd></div>
+          <div><dt>Last updated</dt><dd>{formatDate(resource.last_updated)}</dd></div>
+          <div><dt>Metadata reviewed</dt><dd>{formatDate(resource.reviewed_on)}</dd></div>
+          <div><dt>Language</dt><dd>{languageNames.of(resource.language) ?? resource.language}</dd></div>
+          <div><dt>Geographic coverage</dt><dd>{resource.geographic_scope || "Not stated"}</dd></div>
+          <div>
+            <dt>Bounding box (WGS 84)</dt>
+            <dd>
+              {resource.bbox_wgs84 || "Not stated"}
+              <MapExtentButton bbox={resource.bbox_wgs84} label={resource.canonical_title} />
+            </dd>
+          </div>
+          <div><dt>Temporal coverage</dt><dd>{formatDateRange(resource.temporal_start, resource.temporal_end)}; {humanize(resource.temporal_role)}</dd></div>
+          <div><dt>Themes</dt><dd>{splitValues(resource.thematic_categories).map(humanize).join(", ") || "Not stated"}</dd></div>
+        </dl>
+      </section>
+
+      <section class="detail-section">
+        <h2>Method and provenance</h2>
+        <dl class="detail-list">
+          <div><dt>Production method</dt><dd>{resource.production_method || "Not stated"}</dd></div>
+          <div><dt>Provenance</dt><dd>{resource.provenance_summary || "Not stated"}</dd></div>
+          <div><dt>Validation</dt><dd>{fieldState(resource.validation_status)}</dd></div>
+          <div><dt>Uncertainty</dt><dd>{resource.uncertainty_summary || "Not stated"}</dd></div>
+          <div><dt>Limitations</dt><dd>{resource.limitations || "Not stated"}</dd></div>
+        </dl>
+      </section>
+
+      <section class="detail-section">
+        <h2>Access and reuse</h2>
+        <dl class="detail-list">
+          <div><dt>Access</dt><dd>{fieldState(resource.access_tier)}; <a href={resource.access_url} rel="noreferrer">open access route</a></dd></div>
+          <div><dt>Licence</dt><dd>{resourceLicence}{resource.license_url && <>; <a href={resource.license_url} rel="noreferrer">licence evidence</a></>}</dd></div>
+          <div><dt>Redistribution</dt><dd>{fieldState(resource.redistribution_status)}</dd></div>
+          <div><dt>Catalogue status</dt><dd>{fieldState(resource.current_status)}</dd></div>
+          <div><dt>Provider page</dt><dd><a href={resource.landing_url} rel="noreferrer">Open authoritative resource page</a></dd></div>
+        </dl>
+      </section>
+
+      <section class="detail-section">
+        <div class="assets-header-row">
+          <div class="assets-title-wrap">
+            <h2>Assets</h2>
+            <span class="assets-count-badge">
+              {consolidatedAssets.length === assets.length
+                ? `${assets.length} ${assets.length === 1 ? "asset" : "assets"}`
+                : `${consolidatedAssets.length} asset groups (${assets.length} files and endpoints)`}
+            </span>
+          </div>
+          {consolidatedAssets.length >= 6 && (
+            <div class="assets-quick-filter">
+              <input
+                id="resource-asset-search"
+                type="search"
+                placeholder="Filter assets..."
+                aria-label="Filter assets in this resource"
+                autocomplete="off"
+              />
+            </div>
+          )}
+        </div>
+        {assets.length === 0 ? <p>No child assets are separately inventoried for this resource.</p> : (
+          <div class="resource-assets">
+            {consolidatedAssets.map((item) => (
+              <article
+                class="resource-asset"
+                id={`asset-${item.firstAsset.asset_id}`}
+                data-asset-card
+                data-search={`${item.cleanTitle} ${item.coverage} ${item.formats.map((f) => f.format).join(" ")}`.toLowerCase()}
+              >
+                {item.groupAssets.map((asset) => <span id={asset.asset_id} aria-hidden="true"></span>)}
+                {item.groupAssets.slice(1).map((asset) => <span id={`asset-${asset.asset_id}`} aria-hidden="true"></span>)}
+                <div class="resource-asset-content">
+                  <h3>
+                    <a href={withBase(`assets/${item.firstAsset.asset_id}/`)}>{item.cleanTitle}</a>
+                  </h3>
+                  <p class="resource-asset-coverage">{item.coverage}</p>
+
+                  {item.formats.length > 1 ? (
+                    <div class="multi-format-box">
+                      <span class="multi-format-label">Available formats:</span>
+                      <div class="format-chips">
+                        {item.formats.map((fmt) => (
+                          fmt.canOpen && fmt.url ? (
+                            <a
+                              class="format-chip"
+                              href={fmt.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              title={`${fmt.accessLabel}: ${fmt.label}${fmt.size ? ` (${fmt.size})` : ""}`}
+                            >
+                              <strong class="format-chip-tag">{fmt.label}</strong>
+                              {fmt.size && <span class="format-chip-size">{fmt.size}</span>}
+                              <span class="format-chip-icon" aria-hidden="true">↗</span>
+                            </a>
+                          ) : (
+                            <span class="format-chip format-chip--unavailable" title="Direct download unavailable">
+                              <strong class="format-chip-tag">{fmt.label}</strong>
+                              {fmt.size && <span class="format-chip-size">{fmt.size}</span>}
+                            </span>
+                          )
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p class="resource-asset-meta">
+                      {[item.firstAsset.file_format, item.firstAsset.size_as_shown, humanize(item.firstAsset.asset_type), fieldState(item.firstAsset.access_tier)].filter(Boolean).join(" · ")}
+                    </p>
+                  )}
+                </div>
+                <div class="resource-asset-actions">
+                  {item.formats.length === 1 && item.formats[0].canOpen && item.formats[0].url && (
+                    <a class="button button--quiet" href={item.formats[0].url} target="_blank" rel="noreferrer">
+                      {item.formats[0].accessLabel === "Free registration required" ? "Access via registration" : item.formats[0].format?.toUpperCase() === "PDF" ? "View PDF" : "Open access route"} <span aria-hidden="true">↗</span>
+                    </a>
+                  )}
+                  <a class="asset-view-link" href={withBase(`assets/${item.firstAsset.asset_id}/`)}>
+                    View details & metadata →
+                  </a>
+                  {item.hasFollowUp && (
+                    <span class="status-badge status-badge--warning">Follow-up needed</span>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section class="detail-section">
+        <h2>Authoritative metadata sources</h2>
+        <ul class="sources-list">
+          {sources.map((url, index) => <li><a href={url} rel="noreferrer">Source {index + 1}: {new URL(url).hostname}</a></li>)}
+        </ul>
+      </section>
+    </div>
+  </article>
+  <MapExtentModal />
+
+  <script>
+    const searchInput = document.querySelector<HTMLInputElement>("#resource-asset-search");
+    const assetCards = [...document.querySelectorAll<HTMLElement>("[data-asset-card]")];
+
+    if (searchInput && assetCards.length) {
+      searchInput.addEventListener("input", () => {
+        const query = searchInput.value.trim().toLowerCase();
+        for (const card of assetCards) {
+          const match = !query || (card.dataset.search ? card.dataset.search.includes(query) : false);
+          card.hidden = !match;
+        }
+      });
+    }
+  </script>
+</BaseLayout>}
+
+<style>
+  .resource-head {
+    padding-bottom: clamp(2.75rem, 5vw, 4rem);
+  }
+
+  .resource-container {
+    max-width: 64rem;
+  }
+
+  .back-link {
+    margin: 0 0 1.4rem;
+    font-size: 0.9rem;
+  }
+
+  .back-link a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .back-link svg {
+    width: 1rem;
+    height: 1rem;
+    flex: 0 0 auto;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .resource-head h1 {
+    max-width: 34ch;
+    font-size: clamp(2rem, 4.2vw, 3.2rem);
+    line-height: 1.12;
+  }
+
+  .resource-description {
+    max-width: 64ch;
+    margin: 1.25rem 0 0;
+    color: var(--ink-soft);
+    font-size: 1.03rem;
+    line-height: 1.58;
+  }
+
+  .original-title {
+    max-width: 54rem;
+    margin: 1.25rem 0 0;
+    color: var(--ink-soft);
+    font-family: var(--serif);
+    font-size: 1.05rem;
+    line-height: 1.5;
+  }
+
+  .original-title > :first-child {
+    display: block;
+    margin-bottom: 0.2rem;
+    font-family: var(--sans);
+    font-size: 0.8rem;
+    font-weight: 650;
+  }
+
+  .resource-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.5rem;
+    margin: clamp(2rem, 4vw, 2.75rem) 0 0;
+  }
+
+  .resource-summary dt,
+  .detail-list dt {
+    color: var(--ink-soft);
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+
+  .resource-summary dd {
+    margin: 0.28rem 0 0;
+    font-size: 0.94rem;
+  }
+
+  .resource-page {
+    padding-bottom: clamp(4.5rem, 8vw, 7rem);
+  }
+
+  .detail-section {
+    padding-block: clamp(2.5rem, 5vw, 3.75rem);
+  }
+
+  .detail-section + .detail-section {
+    border-top: 1px solid var(--rule-strong);
+  }
+
+  .detail-section > h2 {
+    margin: 0 0 1.25rem;
+    font-size: clamp(1.35rem, 2vw, 1.65rem);
+    line-height: 1.25;
+  }
+
+  .detail-list {
+    margin: 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .detail-list > div {
+    display: grid;
+    grid-template-columns: minmax(10rem, 0.26fr) minmax(0, 1fr);
+    gap: 1.75rem;
+    border-bottom: 1px solid var(--rule);
+    padding-block: 0.9rem;
+    min-width: 0;
+  }
+
+  .detail-list dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .assets-header-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .assets-title-wrap {
+    display: flex;
+    align-items: baseline;
+    gap: 0.85rem;
+  }
+
+  .assets-header-row h2 {
+    margin: 0;
+  }
+
+  .assets-count-badge {
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+    font-weight: 600;
+  }
+
+  .assets-quick-filter input {
+    min-height: 2.15rem;
+    padding: 0.25rem 0.65rem;
+    font-size: 0.84rem;
+    border: 1px solid var(--rule-strong);
+    border-radius: 4px;
+    background: var(--surface);
+    color: var(--ink);
+    width: 14rem;
+    max-width: 100%;
+  }
+
+  .assets-quick-filter input:focus {
+    outline: 2px solid var(--teal);
+    outline-offset: 1px;
+  }
+
+  .multi-format-box {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    margin-top: 0.6rem;
+  }
+
+  .multi-format-label {
+    font-size: 0.8rem;
+    font-weight: 650;
+    color: var(--ink-soft);
+  }
+
+  .format-chips {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .format-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 4px;
+    background: var(--surface-hover, #edf4f4);
+    border: 1px solid var(--rule-strong, #b8caca);
+    color: var(--ink, #1a2a2a);
+    font-size: 0.8rem;
+    text-decoration: none;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+
+  .format-chip:hover {
+    background: #ddeded;
+    border-color: #2b7a78;
+    color: #174e4c;
+  }
+
+  .format-chip--unavailable {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  .format-chip-size {
+    font-size: 0.75rem;
+    color: var(--ink-soft);
+  }
+
+  .format-chip-icon {
+    font-size: 0.72rem;
+    opacity: 0.7;
+  }
+
+  .asset-view-link {
+    font-size: 0.84rem;
+    color: var(--link, #2b7a78);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .resource-assets {
+    border-top: 1px solid var(--rule-strong);
+  }
+
+  .resource-asset {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1.5rem;
+    align-items: start;
+    scroll-margin-top: 2rem;
+    border-bottom: 1px solid var(--rule-strong);
+    padding-block: 1rem;
+  }
+
+  .resource-asset-content {
+    min-width: 0;
+  }
+
+  .resource-asset h3 {
+    margin: 0;
+    font-family: var(--sans);
+    font-size: 1.02rem;
+    line-height: 1.35;
+  }
+
+  .resource-asset h3 a {
+    color: var(--ink);
+    text-decoration-color: #9fb8b7;
+    overflow-wrap: anywhere;
+  }
+
+  .resource-asset-coverage,
+  .resource-asset-meta {
+    margin: 0.28rem 0 0;
+    color: var(--ink-soft);
+    font-size: 0.86rem;
+  }
+
+  .resource-asset-coverage {
+    color: var(--ink);
+  }
+
+  .resource-asset-actions {
+    display: grid;
+    justify-items: end;
+    gap: 0.5rem;
+    white-space: nowrap;
+    font-size: 0.86rem;
+  }
+
+  @media (max-width: 56rem) {
+    .resource-summary {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 42rem) {
+    .resource-head {
+      padding-block: 3rem 2.75rem;
+    }
+
+    .resource-head h1 {
+      font-size: clamp(1.85rem, 9vw, 2.35rem);
+      overflow-wrap: anywhere;
+    }
+
+    .resource-summary,
+    .detail-list > div {
+      grid-template-columns: 1fr;
+    }
+
+    .resource-summary {
+      gap: 1.25rem;
+    }
+
+    .detail-list > div {
+      gap: 0.4rem;
+      padding-block: 1.2rem;
+    }
+
+    .detail-list dd {
+      overflow-wrap: anywhere;
+    }
+
+    .detail-section {
+      padding-block: 3rem;
+    }
+
+    .resource-asset {
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+      padding-block: 1.2rem;
+    }
+
+    .resource-asset-actions {
+      justify-items: start;
+      white-space: normal;
+    }
+  }
+</style>

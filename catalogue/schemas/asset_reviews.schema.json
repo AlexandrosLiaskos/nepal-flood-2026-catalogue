@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Catalogue asset metadata assessments",
+  "type": "object",
+  "required": [
+    "summary",
+    "assets"
+  ],
+  "properties": {
+    "summary": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "review_id",
+        "scope_asset_count",
+        "screened_assets",
+        "url_checks_complete",
+        "notice"
+      ]
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "asset_id",
+          "parent_id",
+          "source_url",
+          "review_id",
+          "reviewer_type",
+          "screening_status",
+          "screening_disposition",
+          "access",
+          "sources",
+          "fields",
+          "follow_up",
+          "human_eligibility_decision"
+        ],
+        "properties": {
+          "asset_id": {
+            "type": "string"
+          },
+          "parent_id": {
+            "type": "string"
+          },
+          "reviewer_type": {
+            "const": "automated_metadata_and_technical_review"
+          },
+          "screening_status": {
+            "const": "assessed"
+          },
+          "human_eligibility_decision": {
+            "const": "not_assigned_by_this_review"
+          },
+          "fields": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "required": [
+                "value",
+                "state"
+              ],
+              "properties": {
+                "state": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "locator": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "follow_up": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "code",
+                "action"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

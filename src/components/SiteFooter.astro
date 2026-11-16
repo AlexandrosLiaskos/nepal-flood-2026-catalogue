@@ -1,0 +1,213 @@
+---
+import { withBase } from "../lib/format";
+---
+
+<footer class="site-footer">
+  <div class="container footer-main">
+    <div class="footer-identity">
+      <a class="footer-title" href={withBase("")}>Public Data Resources for the 26 August 2026 Nepal Hazard Cascade</a>
+      <p>A living catalogue of publicly available resources for further investigations of the disaster cascade (<a href="https://www.preprints.org/manuscript/202610.0448">Preprint</a>).</p>
+    </div>
+
+    <div class="footer-citation">
+      <h2>Cite the catalogue</h2>
+      <p><span class="citation-authors"><a href="mailto:alexliaskos@geol.uoa.gr">Liaskos, A.</a>, <a href="mailto:evelpidou@geol.uoa.gr">Evelpidou, N.</a>, <a href="mailto:evspyrou@geol.uoa.gr">Spyrou, E.</a>, and <a href="mailto:niteshkhadka48@gmail.com">Khadka, N.</a></span> (2026). <cite>Public Data Resources for the 26 August 2026 Nepal Hazard Cascade</cite>. Version 2026-09-28. Zenodo. <a class="footer-url" href="https://doi.org/10.5281/zenodo.23034746">https://doi.org/10.5281/zenodo.23034746</a></p>
+      <div class="footer-visits" aria-live="polite">
+        <strong id="visit-count" data-visit-count data-endpoint={withBase("api/visit")}>—</strong>
+        <span>Recorded page visits</span>
+      </div>
+      <p class="footer-visit-note">The counter does not use cookies or collect information that can identify individual visitors. Only the aggregate visit count is stored; the counter dataset contains no IP addresses or other identifying information.</p>
+    </div>
+  </div>
+
+  <div class="container footer-bottom">
+    <p><a href="https://en.uoa.gr/">National and Kapodistrian University of Athens</a><span aria-hidden="true"> · </span><a href="https://tu.edu.np/">Tribhuvan University</a></p>
+    <p><a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0 metadata</a><span aria-hidden="true"> · </span><a href="https://opensource.org/license/mit">MIT code</a></p>
+  </div>
+</footer>
+
+<script>
+  const visitCount = document.querySelector<HTMLElement>("[data-visit-count]");
+
+  if (visitCount) {
+    const storageKey = "nepal-flood-2026-catalogue-visit-counted-v1";
+    const endpoint = visitCount.dataset.endpoint;
+    let alreadyCounted = false;
+
+    try {
+      alreadyCounted = sessionStorage.getItem(storageKey) === "yes";
+    } catch {
+      alreadyCounted = false;
+    }
+
+    if (endpoint) {
+      fetch(endpoint, {
+        method: alreadyCounted ? "GET" : "POST",
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      })
+        .then((response) => {
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          return response.json();
+        })
+        .then((payload) => {
+          visitCount.textContent = Number(payload.count).toLocaleString("en");
+          if (!alreadyCounted) {
+            try {
+              sessionStorage.setItem(storageKey, "yes");
+            } catch {
+              // The aggregate counter remains available when session storage is blocked.
+            }
+          }
+        })
+        .catch(() => {
+          visitCount.textContent = "Unavailable";
+        });
+    }
+  }
+</script>
+
+<style>
+  .site-footer {
+    background: var(--ink);
+    color: #d7e1e4;
+    padding: clamp(2.5rem, 5vw, 3.5rem) 0 1.4rem;
+    font-size: 0.9rem;
+  }
+
+  .site-footer a {
+    color: #b8dedb;
+    text-decoration-color: #6fa6a3;
+  }
+
+  .site-footer a:hover {
+    color: #ffffff;
+  }
+
+  .site-footer :focus-visible {
+    outline-color: #7dd3ce;
+  }
+
+  .footer-main {
+    display: grid;
+    grid-template-columns: minmax(16rem, 0.72fr) minmax(24rem, 1.28fr);
+    gap: clamp(3rem, 8vw, 7rem);
+    align-items: start;
+  }
+
+  .footer-title {
+    display: block;
+    max-width: 24ch;
+    color: #ffffff !important;
+    font-family: var(--serif);
+    font-size: clamp(1.25rem, 2vw, 1.55rem);
+    font-weight: 570;
+    line-height: 1.28;
+    text-decoration: none;
+  }
+
+  .footer-identity p {
+    max-width: 38ch;
+    margin: 0.9rem 0 0;
+    color: #c2ced2;
+    line-height: 1.55;
+  }
+
+  .footer-visits {
+    display: flex;
+    align-items: baseline;
+    gap: 0.45rem;
+    margin-top: 1.15rem;
+    color: #ffffff;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .footer-visits strong {
+    font-family: var(--serif);
+    font-size: 1.35rem;
+    font-weight: 570;
+    line-height: 1;
+  }
+
+  .footer-visits span {
+    color: #d7e1e4;
+    font-size: 0.84rem;
+  }
+
+  .footer-citation .footer-visit-note {
+    max-width: 74ch;
+    margin: 0.45rem 0 0;
+    color: #afbec3;
+    font-size: 0.78rem;
+    line-height: 1.5;
+  }
+
+  .footer-citation h2 {
+    margin: 0 0 0.75rem;
+    color: #ffffff;
+    font-family: var(--sans);
+    font-size: 0.9rem;
+    font-weight: 650;
+    letter-spacing: 0;
+  }
+
+  .footer-citation p {
+    max-width: 74ch;
+    margin: 0;
+    color: #e4eaec;
+    line-height: 1.58;
+  }
+
+  .citation-authors a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .citation-authors a:hover {
+    text-decoration: underline;
+  }
+
+  .footer-url {
+    overflow-wrap: anywhere;
+  }
+
+  .footer-bottom {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.5rem;
+    margin-top: clamp(2rem, 4vw, 3rem);
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
+    padding-top: 1.15rem;
+    color: #afbec3;
+    font-size: 0.82rem;
+  }
+
+  .footer-bottom p {
+    margin: 0;
+  }
+
+  @media (max-width: 48rem) {
+    .site-footer {
+      padding-block: 3rem max(1.5rem, env(safe-area-inset-bottom));
+    }
+
+    .footer-main {
+      grid-template-columns: 1fr;
+      gap: 2.4rem;
+    }
+
+    .footer-title,
+    .footer-identity p,
+    .footer-citation p,
+    .footer-citation .footer-visit-note {
+      max-width: none;
+    }
+
+    .footer-bottom {
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-top: 2.75rem;
+    }
+  }
+</style>

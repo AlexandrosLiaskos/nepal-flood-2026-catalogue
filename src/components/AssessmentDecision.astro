@@ -1,0 +1,84 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { assessmentCorrections, type AssessmentResource, type AssessmentAsset } from "../lib/assessment";
+import { fieldState, formatDate, humanize, withBase } from "../lib/format";
+
+interface Props {
+  assessment: AssessmentResource;
+  assets?: AssessmentAsset[];
+}
+
+const { assessment, assets = [] } = Astro.props;
+const title = assessment.reviewed_title || assessment.original_title || assessment.resource_id;
+const corrections = assessmentCorrections(assessment.metadata_corrections);
+const outcome = assessment.eligibility_outcome === "exclude" ? "Excluded from the assessed catalogue" : fieldState(assessment.eligibility_outcome);
+const sourceUrls = [...new Set([assessment.landing_url, ...assessment.source_evidence].filter(Boolean))].filter((url) => {
+  try { return ["http:", "https:"].includes(new URL(url).protocol); } catch { return false; }
+});
+---
+
+<BaseLayout title={title} description={`${title}. ${outcome}.`} noindex>
+  <header class="page-head page-head--compact">
+    <div class="container decision-container">
+      <p><a href={withBase("assessment/")}>Back to assessment decisions</a></p>
+      <h1>{title}</h1>
+      <p class="decision-outcome">{outcome}</p>
+    </div>
+  </header>
+  <article class="decision-page container decision-container">
+    <dl class="decision-details">
+      <div><dt>Assessment date</dt><dd>{formatDate(assessment.assessment_date)}</dd></div>
+      <div><dt>Decision</dt><dd>{humanize(assessment.specific_decision)}</dd></div>
+      <div><dt>Reason</dt><dd>{assessment.reason || "Not stated in the assessment ledger"}</dd></div>
+      <div><dt>Resource reference</dt><dd>{assessment.resource_id}</dd></div>
+      {assessment.original_title && assessment.original_title !== title && <div><dt>Original title</dt><dd>{assessment.original_title}</dd></div>}
+    </dl>
+    {corrections.length > 0 && <section aria-labelledby="corrections-heading">
+      <h2 id="corrections-heading">Metadata corrections</h2>
+      <dl class="decision-details">
+        {corrections.map((correction) => <div><dt>{humanize(correction.field)}</dt><dd>{correction.value}</dd></div>)}
+      </dl>
+    </section>}
+    {sourceUrls.length > 0 && <section aria-labelledby="sources-heading">
+      <h2 id="sources-heading">Source evidence</h2>
+      <ul class="source-links">
+        {sourceUrls.map((url, index) => <li><a href={url} rel="noreferrer">Source {index + 1}: {new URL(url).hostname}</a></li>)}
+      </ul>
+    </section>}
+    {assets.length > 0 && <section aria-labelledby="asset-decisions-heading">
+      <h2 id="asset-decisions-heading">Asset decisions</h2>
+      <p>These decisions remain in the assessment ledger. The assets below are outside the included asset index.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">Asset</th><th scope="col">Outcome</th><th scope="col">Reason</th></tr></thead>
+          <tbody>{assets.map((asset) => <tr id={`asset-${asset.asset_id}`}>
+            <td>{asset.reviewed_title || asset.original_title || asset.asset_id}<small>{asset.asset_id}</small></td>
+            <td>{fieldState(asset.eligibility_outcome)}</td>
+            <td>{asset.reason}</td>
+          </tr>)}</tbody>
+        </table>
+      </div>
+    </section>}
+    <p class="ledger-link"><a href={withBase("data/assessment-resources.csv")} download>Download all resource decisions</a> · <a href={withBase("data/assessment-assets.csv")} download>Download all asset decisions</a></p>
+  </article>
+</BaseLayout>
+
+<style>
+  .decision-container { max-width: 64rem; }
+  .decision-container h1 { max-width: 34ch; overflow-wrap: anywhere; }
+  .decision-outcome { font-weight: 650; color: var(--ink-soft); }
+  .decision-page { padding-block: 2rem 5rem; }
+  .decision-page section { margin-top: 2.5rem; }
+  .decision-details { margin: 0; border-top: 1px solid var(--rule); }
+  .decision-details > div { display: grid; grid-template-columns: minmax(10rem, 0.25fr) minmax(0, 1fr); gap: 1.5rem; padding-block: 1rem; border-bottom: 1px solid var(--rule); }
+  .decision-details dt { color: var(--ink-soft); font-size: 0.85rem; font-weight: 650; }
+  .decision-details dd { margin: 0; overflow-wrap: anywhere; }
+  .source-links { padding-left: 1.2rem; overflow-wrap: anywhere; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; vertical-align: top; padding: 0.85rem 1rem 0.85rem 0; border-bottom: 1px solid var(--rule); }
+  td:first-child { width: 35%; }
+  td small { display: block; margin-top: 0.3rem; color: var(--ink-soft); overflow-wrap: anywhere; }
+  .ledger-link { margin-top: 2.5rem; }
+  @media (max-width: 42rem) { .decision-details > div { grid-template-columns: 1fr; gap: 0.35rem; } }
+</style>

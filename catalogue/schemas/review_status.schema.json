@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://evelpidou.geo.nkua.cloud/Nepal-Flood-2026-Catalogue/data/schemas/review_status.schema.json",
+  "title": "Public catalogue status",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "catalogue_status", "status_as_of", "initial_cycle_started_on",
+    "first_search_at", "last_search_at", "searches_complete_through", "manuscript_version",
+    "search_status", "nomination_status", "reviewed_resources", "reviewed_assets", "included_resources", "candidate_records_under_review",
+    "candidate_assets_under_review", "newly_eligible_awaiting_integration"
+  ],
+  "properties": {
+    "schema_version": {"const": "2.0.0"},
+    "catalogue_status": {"const": "active"},
+    "status_as_of": {"type": "string", "format": "date"},
+    "initial_cycle_started_on": {"type": "string", "format": "date"},
+    "first_search_at": {"type": "string", "format": "date-time"},
+    "last_search_at": {"type": "string", "format": "date-time"},
+    "searches_complete_through": {"type": ["string", "null"], "format": "date"},
+    "manuscript_version": {"type": ["integer", "null"], "minimum": 1},
+    "search_status": {"enum": ["initial_search_programme_in_progress", "ongoing", "reduced_frequency", "retired"]},
+    "nomination_status": {"enum": ["under_review", "open", "closed"]},
+    "reviewed_resources": {"type": "integer", "minimum": 0},
+    "reviewed_assets": {"type": "integer", "minimum": 0},
+    "included_resources": {"type": "integer", "minimum": 0},
+    "candidate_records_under_review": {"type": "integer", "minimum": 0},
+    "candidate_assets_under_review": {"type": "integer", "minimum": 0},
+    "newly_eligible_awaiting_integration": {"type": "integer", "minimum": 0}
+  }
+}

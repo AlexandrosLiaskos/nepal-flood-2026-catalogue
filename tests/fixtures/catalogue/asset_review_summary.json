@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "review_id": "TEST",
+  "as_of": "2026-01-02",
+  "scope_asset_count": 0,
+  "screened_assets": 0,
+  "metadata_records_reviewed": 0,
+  "assets_needing_follow_up": 0,
+  "assets_without_recorded_follow_up": 0,
+  "unique_source_urls": 0,
+  "url_checks_complete": false,
+  "dispositions": {},
+  "access_results": {},
+  "issue_counts": {}
+}

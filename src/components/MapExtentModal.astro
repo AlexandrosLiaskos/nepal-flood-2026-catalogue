@@ -1,0 +1,463 @@
+---
+import "maplibre-gl/dist/maplibre-gl.css";
+---
+
+<dialog class="map-extent-dialog" id="map-extent-dialog" aria-labelledby="map-extent-heading" aria-describedby="map-extent-subject">
+  <section class="map-extent-shell">
+    <header class="map-extent-header">
+      <div>
+        <h2 id="map-extent-heading">Spatial extent</h2>
+        <p id="map-extent-subject"></p>
+      </div>
+      <button class="map-extent-close" type="button" aria-label="Close map">
+        <svg viewBox="0 0 20 20" aria-hidden="true">
+          <path d="m4.5 4.5 11 11m0-11-11 11"></path>
+        </svg>
+      </button>
+    </header>
+
+    <div class="map-extent-frame">
+      <div class="map-extent-canvas" id="map-extent-canvas" role="region" aria-label="Interactive map of the recorded spatial extent"></div>
+      <p class="map-extent-state" id="map-extent-loading" role="status">Loading map…</p>
+      <p class="map-extent-state map-extent-error" id="map-extent-error" role="alert" hidden>The map could not be loaded.</p>
+    </div>
+
+    <footer class="map-extent-footer">
+      <p class="map-extent-key">
+        <span class="map-extent-swatch" aria-hidden="true"></span>
+        <span>Recorded bounding box</span>
+        <span class="map-extent-coordinates" id="map-extent-coordinates"></span>
+      </p>
+      <button class="button--quiet map-extent-fit" id="map-extent-fit" type="button" disabled>Fit extent</button>
+    </footer>
+  </section>
+</dialog>
+
+<script>
+  import mapWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
+
+  type Bounds = [number, number, number, number];
+  type GeoJsonData = Parameters<import("maplibre-gl").GeoJSONSource["setData"]>[0];
+
+  const dialog = document.querySelector<HTMLDialogElement>("#map-extent-dialog");
+  const canvas = document.querySelector<HTMLElement>("#map-extent-canvas");
+  const subject = document.querySelector<HTMLElement>("#map-extent-subject");
+  const coordinates = document.querySelector<HTMLElement>("#map-extent-coordinates");
+  const loading = document.querySelector<HTMLElement>("#map-extent-loading");
+  const error = document.querySelector<HTMLElement>("#map-extent-error");
+  const fitButton = document.querySelector<HTMLButtonElement>("#map-extent-fit");
+  const closeButton = document.querySelector<HTMLButtonElement>(".map-extent-close");
+  const triggers = document.querySelectorAll<HTMLButtonElement>("[data-map-bounds]");
+
+  if (dialog && canvas && subject && coordinates && loading && error && fitButton && closeButton) {
+    let map: import("maplibre-gl").Map | undefined;
+    let mapReady = false;
+    let activeBounds: Bounds | undefined;
+    let opener: HTMLButtonElement | undefined;
+    let modulePromise: Promise<typeof import("maplibre-gl")> | undefined;
+    let loadTimer: number | undefined;
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const numberFormat = new Intl.NumberFormat("en", { maximumFractionDigits: 6 });
+
+    const parseBounds = (value: string | undefined): Bounds | undefined => {
+      if (!value) return undefined;
+      try {
+        const parsed: unknown = JSON.parse(value);
+        if (!Array.isArray(parsed) || parsed.length !== 4 || parsed.some((item) => typeof item !== "number" || !Number.isFinite(item))) {
+          return undefined;
+        }
+        return parsed as Bounds;
+      } catch {
+        return undefined;
+      }
+    };
+
+    const extentFeature = ([west, south, east, north]: Bounds): GeoJsonData => {
+      if (west === east && south === north) {
+        return {
+          type: "Feature",
+          properties: {},
+          geometry: { type: "Point", coordinates: [west, south] },
+        };
+      }
+
+      return {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "Polygon",
+          coordinates: [[
+            [west, south],
+            [east, south],
+            [east, north],
+            [west, north],
+            [west, south],
+          ]],
+        },
+      };
+    };
+
+    const fitExtent = () => {
+      if (!map || !activeBounds) return;
+      let [west, south, east, north] = activeBounds;
+      const longitudePadding = west === east ? 0.015 : 0;
+      const latitudePadding = south === north ? 0.015 : 0;
+      west -= longitudePadding;
+      east += longitudePadding;
+      south -= latitudePadding;
+      north += latitudePadding;
+      map.fitBounds([[west, south], [east, north]], {
+        padding: window.innerWidth < 640 ? 32 : 56,
+        maxZoom: 14,
+        duration: reducedMotion.matches ? 0 : 520,
+      });
+    };
+
+    const updateExtent = () => {
+      if (!map || !mapReady || !activeBounds) return;
+      const source = map.getSource("recorded-extent") as import("maplibre-gl").GeoJSONSource | undefined;
+      source?.setData(extentFeature(activeBounds));
+      map.resize();
+      fitExtent();
+    };
+
+    const showError = () => {
+      if (loadTimer !== undefined) {
+        window.clearTimeout(loadTimer);
+        loadTimer = undefined;
+      }
+      loading.hidden = true;
+      error.hidden = false;
+      fitButton.disabled = true;
+    };
+
+    const ensureMap = async () => {
+      if (map) {
+        updateExtent();
+        return;
+      }
+
+      try {
+        const maplibre = await (modulePromise ??= import("maplibre-gl"));
+        maplibre.setWorkerUrl(mapWorkerUrl);
+        map = new maplibre.Map({
+          container: canvas,
+          style: "https://tiles.openfreemap.org/styles/positron",
+          center: [85.2, 28.1],
+          zoom: 7,
+          attributionControl: false,
+          dragRotate: false,
+          pitchWithRotate: false,
+        });
+        map.addControl(new maplibre.NavigationControl({ showCompass: false }), "top-right");
+        map.addControl(new maplibre.AttributionControl({ compact: true }), "bottom-right");
+        loadTimer = window.setTimeout(() => {
+          if (!mapReady) showError();
+        }, 15000);
+        map.on("error", () => {
+          if (!mapReady) showError();
+        });
+        map.once("load", () => {
+          if (!map) return;
+          if (loadTimer !== undefined) {
+            window.clearTimeout(loadTimer);
+            loadTimer = undefined;
+          }
+          map.addSource("recorded-extent", {
+            type: "geojson",
+            data: { type: "FeatureCollection", features: [] },
+          });
+          map.addLayer({
+            id: "recorded-extent-fill",
+            type: "fill",
+            source: "recorded-extent",
+            paint: {
+              "fill-color": "#bd3027",
+              "fill-opacity": 0.1,
+            },
+          });
+          map.addLayer({
+            id: "recorded-extent-outline",
+            type: "line",
+            source: "recorded-extent",
+            paint: {
+              "line-color": "#bd3027",
+              "line-width": 2.5,
+            },
+          });
+          map.addLayer({
+            id: "recorded-extent-point",
+            type: "circle",
+            source: "recorded-extent",
+            filter: ["==", ["geometry-type"], "Point"],
+            paint: {
+              "circle-color": "#ffffff",
+              "circle-radius": 7,
+              "circle-stroke-color": "#bd3027",
+              "circle-stroke-width": 3,
+            },
+          });
+          mapReady = true;
+          loading.hidden = true;
+          error.hidden = true;
+          fitButton.disabled = false;
+          updateExtent();
+        });
+      } catch {
+        showError();
+      }
+    };
+
+    for (const trigger of triggers) {
+      trigger.addEventListener("click", () => {
+        const bounds = parseBounds(trigger.dataset.mapBounds);
+        if (!bounds) return;
+        activeBounds = bounds;
+        opener = trigger;
+        const label = trigger.dataset.mapLabel || "Catalogue entry";
+        subject.textContent = label;
+        coordinates.textContent = `WGS 84: ${bounds.map((value) => numberFormat.format(value)).join(", ")}`;
+        canvas.setAttribute("aria-label", `Interactive map showing the recorded spatial extent for ${label}`);
+        loading.hidden = mapReady;
+        error.hidden = true;
+        fitButton.disabled = !mapReady;
+        dialog.showModal();
+        document.documentElement.classList.add("map-extent-open");
+        requestAnimationFrame(() => void ensureMap());
+      });
+    }
+
+    closeButton.addEventListener("click", () => dialog.close());
+    fitButton.addEventListener("click", fitExtent);
+    dialog.addEventListener("click", (event) => {
+      if (event.target === dialog) dialog.close();
+    });
+    dialog.addEventListener("close", () => {
+      document.documentElement.classList.remove("map-extent-open");
+      opener?.focus();
+    });
+  }
+</script>
+
+<style>
+  :global(html.map-extent-open) {
+    overflow: hidden;
+  }
+
+  .map-extent-dialog {
+    width: min(68rem, calc(100vw - 2rem));
+    max-width: none;
+    max-height: calc(100dvh - 2rem);
+    margin: auto;
+    border: 1px solid var(--rule-strong);
+    border-radius: 0.2rem;
+    padding: 0;
+    overflow: hidden;
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: 0 1.4rem 4rem rgba(24, 42, 56, 0.22);
+  }
+
+  .map-extent-dialog::backdrop {
+    background: rgba(15, 29, 39, 0.64);
+  }
+
+  .map-extent-shell {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    max-height: calc(100dvh - 2rem);
+  }
+
+  .map-extent-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.5rem;
+    border-bottom: 1px solid var(--rule);
+    padding: 1.15rem 1.25rem 1rem;
+  }
+
+  .map-extent-header h2 {
+    margin: 0;
+    font-size: 1.4rem;
+    line-height: 1.2;
+  }
+
+  .map-extent-header p {
+    max-width: 74ch;
+    margin: 0.3rem 0 0;
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+    line-height: 1.42;
+  }
+
+  .map-extent-close {
+    width: 2.55rem;
+    min-width: 2.55rem;
+    min-height: 2.55rem;
+    border: 1px solid var(--rule-strong);
+    border-radius: 0.15rem;
+    padding: 0;
+    background: var(--surface);
+    color: var(--ink);
+  }
+
+  .map-extent-close:hover {
+    border-color: var(--teal-dark);
+    background: var(--teal-pale);
+    color: var(--teal-dark);
+  }
+
+  .map-extent-close svg {
+    width: 1.05rem;
+    height: 1.05rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.55;
+    stroke-linecap: round;
+  }
+
+  .map-extent-frame {
+    position: relative;
+    min-height: 22rem;
+    background: var(--surface-muted);
+  }
+
+  .map-extent-canvas {
+    width: 100%;
+    height: clamp(22rem, 62vh, 40rem);
+  }
+
+  .map-extent-state {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    margin: 0;
+    background: var(--surface-muted);
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+  }
+
+  .map-extent-state[hidden] {
+    display: none;
+  }
+
+  .map-extent-error {
+    color: var(--ink);
+  }
+
+  .map-extent-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    border-top: 1px solid var(--rule);
+    padding: 0.85rem 1.25rem;
+  }
+
+  .map-extent-key {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.55rem;
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 0.84rem;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .map-extent-swatch {
+    width: 1.2rem;
+    height: 0.68rem;
+    border: 2px solid #bd3027;
+    background: rgba(189, 48, 39, 0.1);
+  }
+
+  .map-extent-coordinates {
+    color: #74828a;
+  }
+
+  .map-extent-fit {
+    flex: 0 0 auto;
+    min-height: 2.35rem;
+    padding: 0.38rem 0.72rem;
+    font-size: 0.85rem;
+  }
+
+  .map-extent-fit:disabled {
+    border-color: var(--rule);
+    background: var(--surface-muted);
+    color: var(--ink-soft);
+    cursor: not-allowed;
+  }
+
+  .map-extent-dialog :global(.maplibregl-ctrl-group) {
+    overflow: hidden;
+    border: 1px solid var(--rule-strong);
+    border-radius: 0.15rem;
+    box-shadow: none;
+  }
+
+  .map-extent-dialog :global(.maplibregl-ctrl-group button) {
+    width: 2.5rem;
+    height: 2.5rem;
+    background-color: rgba(255, 255, 255, 0.96);
+  }
+
+  .map-extent-dialog :global(.maplibregl-ctrl-group button:hover) {
+    background-color: var(--teal-pale);
+  }
+
+  .map-extent-dialog :global(.maplibregl-ctrl-attrib) {
+    color: var(--ink-soft);
+    font-family: var(--sans);
+    font-size: 0.68rem;
+  }
+
+  .map-extent-dialog :global(.maplibregl-ctrl-attrib a) {
+    color: var(--teal-dark);
+  }
+
+  @media (max-width: 42rem) {
+    .map-extent-dialog {
+      width: calc(100vw - 1rem);
+      max-height: calc(100dvh - 1rem);
+    }
+
+    .map-extent-shell {
+      max-height: calc(100dvh - 1rem);
+    }
+
+    .map-extent-header {
+      padding: 0.95rem 1rem 0.85rem;
+    }
+
+    .map-extent-header p {
+      display: -webkit-box;
+      overflow: hidden;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+    }
+
+    .map-extent-frame {
+      min-height: 19rem;
+    }
+
+    .map-extent-canvas {
+      height: min(58dvh, 31rem);
+      min-height: 19rem;
+    }
+
+    .map-extent-footer {
+      align-items: flex-end;
+      padding: 0.75rem 1rem;
+    }
+
+    .map-extent-coordinates {
+      flex-basis: 100%;
+    }
+  }
+</style>

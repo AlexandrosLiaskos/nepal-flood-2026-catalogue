@@ -1,0 +1,228 @@
+---
+import { displayValue, reviewedAssetDispositionLabel } from "../lib/asset-review";
+import { assessmentCorrections } from "../lib/assessment";
+import type { AssetReview } from "../lib/asset-review";
+import { fieldState, formatDate, humanize, withBase } from "../lib/format";
+interface Props { review: AssetReview; }
+const { review } = Astro.props;
+const assessment = review.assessment;
+const isEmptyAssessmentValue = (value: unknown): boolean => value === null || value === undefined
+  || (typeof value === "string" && ["", "{}", "[]", "null"].includes(value.trim()))
+  || (typeof value === "object" && Object.keys(value).length === 0);
+const parseAssessmentValue = (value: unknown): unknown => {
+  if (isEmptyAssessmentValue(value)) return null;
+  if (typeof value !== "string") return value;
+  try { return JSON.parse(value); } catch { return value; }
+};
+const readableAssessmentValue = (value: unknown): string => {
+  if (Array.isArray(value)) return value.filter((item) => !isEmptyAssessmentValue(item)).map(readableAssessmentValue).join("; ");
+  const text = String(value);
+  return /^[a-z0-9_]+$/.test(text) && text.includes("_") ? humanize(text) : text;
+};
+const correctionRows = assessmentCorrections(assessment?.metadata_corrections)
+  .filter((row) => !isEmptyAssessmentValue(parseAssessmentValue(row.value)));
+const flatCorrections = correctionRows.filter((row) => typeof parseAssessmentValue(row.value) !== "object");
+const complexCorrections = correctionRows.filter((row) => typeof parseAssessmentValue(row.value) === "object")
+  .map((row) => ({ label: `Metadata: ${humanize(row.field)}`, value: row.value }));
+const assessmentLabels: Record<string, string> = {
+  source_specific_assessment: "Source assessment", limitations: "Limitations",
+  source_recorded_access: "Recorded access", access_status: "Access status", access_tier: "Access conditions",
+  access_route: "Access route", result: "Access result", route: "Access route",
+  source_recorded_rights: "Recorded rights", rights_note: "Rights note", rights_status: "Rights status",
+  license_spdx: "Licence", license_url: "Licence evidence", redistribution_status: "Redistribution",
+};
+const assessmentDetails: { label: string; value: string }[] = [...complexCorrections];
+const narrativeRows = (value: unknown, section: string): { label: string; value: string }[] => {
+  const parsed = parseAssessmentValue(value);
+  if (isEmptyAssessmentValue(parsed)) return [];
+  if (typeof parsed !== "object" || Array.isArray(parsed)) return [{ label: section, value: readableAssessmentValue(parsed) }];
+  const rows: { label: string; value: string }[] = [];
+  for (const [key, detail] of Object.entries(parsed as Record<string, unknown>)) {
+    if (isEmptyAssessmentValue(detail)) continue;
+    const flat = typeof detail !== "object" || (Array.isArray(detail) && detail.every((item) => typeof item !== "object"));
+    if (key in assessmentLabels && flat) {
+      rows.push({ label: assessmentLabels[key], value: readableAssessmentValue(detail) });
+    } else if ((key === "source_recorded_access" || key === "source_recorded_rights") && detail && typeof detail === "object" && !Array.isArray(detail)) {
+      rows.push(...narrativeRows(detail, assessmentLabels[key]));
+    } else {
+      assessmentDetails.push({ label: `${section}: ${humanize(key)}`, value: typeof detail === "string" ? detail : JSON.stringify(detail, null, 2) });
+    }
+  }
+  return rows;
+};
+const accessAssessment = narrativeRows(assessment?.access_assessment, "Access assessment");
+const rightsAssessment = narrativeRows(assessment?.rights_assessment, "Rights assessment");
+const parsedEvidence = parseAssessmentValue(assessment?.source_evidence);
+const assessmentSources = (Array.isArray(parsedEvidence) ? parsedEvidence : typeof parsedEvidence === "string" ? parsedEvidence.split(/\s*;\s*/) : [])
+  .filter((source): source is string => typeof source === "string")
+  .filter((source) => { try { return ["http:", "https:"].includes(new URL(source).protocol); } catch { return false; } });
+const keyLabels: Record<string, string> = {
+  upstream_road_identifier: "Department of Roads record identifier",
+  road_number: "Road number", road_link_code: "Road-section code",
+  road_location_as_stated: "Location stated by this source", road_location_detail_from_dor: "Detailed location stated by the Department of Roads",
+  road_division: "Responsible road division", road_district: "District field in this source",
+  road_chainage_as_stated: "Starting chainage as stated", road_end_chainage_as_stated: "Ending chainage as stated",
+  road_status_as_stated: "Road status in the retrieved record",
+  road_closure_started_on: "Recorded start of blockage", road_estimated_end: "Estimated end of blockage",
+  road_actual_end: "Actual-end field supplied by the source",
+  road_repair_estimate: "Estimated repair duration", road_repair_duration_as_stated: "Repair-duration label supplied by the source",
+  road_source_reason: "Reason attributed by the source", road_source_remarks: "Remarks supplied by the source",
+  road_response_efforts: "Response activity reported by the source",
+  road_record_date_created: "Record creation date", road_source_modified_on: "Source database modification time",
+  road_point: "Road-record point coordinates", road_embedded_highway_id: "Highway identifier embedded in the earlier BIPAD alert",
+  road_source_relationship: "Relationship between Department of Roads and BIPAD records",
+  road_timestamp_comparison: "Comparison of timestamp fields across sources",
+  road_quality_flags: "Unresolved road-record findings", road_history_limit: "Limits of the available road history",
+  road_alert_reference_changes: "Differences from the earlier alert reference",
+  road_geometry_limit: "Limits of road location and length information", image_links_listed: "Image links listed in the BIPAD record",
+  provider: "Provider", dataset_family: "Dataset family", source_identifier: "Source identifier",
+  file_format: "Linked file format", source_product_format: "Underlying product format",
+  provider_file_bytes: "Provider-stated file bytes", observed_response_bytes: "HTTP response size",
+  file_crs: "File coordinate system", file_pixel_spacing: "File pixel spacing",
+  source_grid_crs_wkt: "Source grid coordinate system (representative file)",
+  source_grid_dimensions: "Source grid dimensions", source_resolution_as_stated: "Source resolution",
+  source_resolution_class: "Source resolution class", source_bbox_wgs84: "Source bounds (west, south, east, north)",
+  file_bbox_wgs84: "File bounds (WGS 84)", source_observation_start: "Source observation start",
+  source_observation_end: "Source observation end", acquisition_intervals_from_identifier: "Radar acquisition intervals",
+  product_processed_at: "Product processing time", processing_level: "Processing level",
+  sensor: "Sensor", platform: "Platform", product_cloud_coverage_percent: "Product cloud coverage (%)",
+  product_spatial_coverage_percent: "Product spatial coverage (%)", licence_identifier: "Licence identifier",
+  rights_statement: "Rights statement", service_fields: "Service attribute fields",
+  sensor_identity_conflict: "Sensor identity conflict", source_date_conflict: "Source date conflict",
+  survey_site_location: "Survey-site location (not frame footprint)",
+  evidence_class: "Evidence role", source_version: "Source version",
+  publication_date: "Publication date", source_file_updated_at: "Source file updated",
+  source_file_uploaded_at: "Source file uploaded", repository_commit: "Repository commit",
+  repository_file_path: "Path within the source repository", provider_checksum: "Provider checksum",
+  source_acquisition_dates: "Observation and acquisition dates", acquisition_context: "Acquisition context",
+  file_bands: "Raster bands", file_data_type: "Raster data type", file_nodata: "No-data value",
+  file_coordinate_bounds: "File coordinate bounds", vertical_datum: "Vertical datum",
+  feature_count: "Spatial features", geometry_types: "Geometry types", attribute_fields: "Variables and attributes",
+  table_row_count: "Table rows", variable_units: "Variable units", json_content: "Structured contents",
+  layer_inventory: "Spatial layers", netcdf_variables: "NetCDF variables", weighting_scope: "Spatial weighting",
+  document_pages: "Document pages", archive_entries: "Archive entries",
+  archive_content_files: "Content files in archive", archive_formats: "Archive file formats",
+  archive_raster_grids: "Archived raster grids", archive_structure: "Archive inspection",
+  empty_archive_members: "Empty archive files", source_version_conflict: "Conflicting version fields",
+  vector_access_conditions: "Vector access conditions", figure_credit: "Figure credit",
+  measurement_uncertainty: "Measurement uncertainty", value_encoding_limit: "Value-encoding limitation",
+  asset_licence_as_stated: "Asset licence statement", method_summary: "Assessment basis",
+  interpretation_limit: "Interpretation limit",
+  bipad_station_id: "BIPAD station identifier",
+  bipad_district_id: "BIPAD district identifier",
+  unique_observation_ids: "Distinct observation identifiers",
+  unit_and_datum_limit: "Unit and gauge-reference limits",
+  threshold_interpretation: "Threshold fields in the retrieved records",
+  overlap_with_dhm: "Overlap with previously retrieved DHM observations",
+  created_after_observation_seconds_min: "Smallest creation-to-observation time difference (seconds)",
+  created_after_observation_seconds_max: "Largest creation-to-observation time difference (seconds)",
+  original_nepali_title: "Original Nepali alert title",
+  alert_started_on: "Alert start stated by BIPAD",
+  alert_created_on: "Alert database creation time",
+  alert_expires_on: "Alert expiry stated by BIPAD",
+  embedded_observation_time: "Time of the embedded reference observation",
+  embedded_observation_after_start_seconds: "Embedded observation after alert start (seconds)",
+  created_after_start_seconds: "Database creation after alert start (seconds)",
+  alert_source_label: "Source label on the alert",
+  source_verification_label: "Provider visibility and verification flags",
+  alert_reference_id: "Upstream station reference on the alert",
+  source_point_reference: "Reference-point coordinates and stated system",
+  alert_level_field_conflict: "Different water-level fields in the alert",
+  station_name_as_stated: "Station name in the source", station_stationIndex: "Station index",
+  station_id: "Station page identifier", station_series_id: "Observation series identifier",
+  station_basin: "River basin", station_district: "District stated by the source",
+  station_latitude: "Station latitude", station_longitude: "Station longitude",
+  station_elevation: "Station elevation (not gauge datum)", station_description: "Station description",
+  source_variable: "Observed variable", source_units: "Units reported by the source",
+  series_availability: "Historical query result", strict_event_window: "Requested analysis window",
+  observation_count: "Readings in the complete source response",
+  event_window_observation_count: "Readings inside the requested UTC window",
+  source_time_zone: "Observation time zone", historical_query_instructions: "How to retrieve this interval",
+  unique_timestamp_count: "Distinct observation timestamps", duplicate_timestamps: "Duplicate timestamps",
+  null_value_count: "Readings with no value", non_numeric_value_count: "Nonnumeric values",
+  nonfinite_value_count: "Nonfinite values", negative_value_count: "Negative values",
+  unparseable_or_timezone_missing_timestamps: "Unresolved observation timestamps",
+  modal_positive_spacing_seconds: "Most common observed interval (seconds)",
+  largest_internal_gap_seconds: "Largest internal observation interval (seconds)",
+  intervals_larger_than_modal_spacing: "Intervals longer than the most common spacing",
+  accumulation_duration: "Rainfall accumulation duration", nominal_sampling_interval: "Declared sampling interval",
+  quality_control_status: "Instrument quality-control information",
+  warning_threshold_as_currently_listed: "Warning threshold at retrieval (historical validity unconfirmed)",
+  danger_threshold_as_currently_listed: "Danger threshold at retrieval (historical validity unconfirmed)",
+  publication_date_as_stated: "Publication date stated by the source",
+  document_date_as_stated: "Date stated inside the document", original_document_date: "Original document date",
+  source_listing_title: "Original listing title", listing_title_as_stated: "Original listing entry",
+  original_publisher: "Original publisher", distribution_host: "Distribution host",
+  source_listed_size_as_shown: "File size shown in the source listing",
+  document_fields: "Fields described in the document", record_period: "Historical record period",
+  rights_declaration: "Use declaration in the request form",
+  issue_time_as_labelled: "Bulletin issue time as labelled", actual_dissemination_time: "Actual dissemination time",
+  forecast_period_definition: "Forecast period definition",
+  reported_discharge_summary: "Discharge estimates reported by CHWRR",
+  reported_volume_summary: "Water-volume estimates reported by CHWRR",
+  reported_volume_interval_ambiguity: "Unresolved volume-integration interval",
+  station_identity_conflicts: "Unresolved station identities",
+  warning_timeline_interpretation: "What the warning chronology establishes",
+  discharge_rating_curve: "Source stage–discharge relationship",
+};
+const safeSource = (url: string) => /^https?:\/\//.test(url) && !url.startsWith("http://s3:");
+const entries = Object.entries(review.fields).filter(([key]) => key in keyLabels);
+---
+<div class="asset-review" data-screening-disposition={review.screening_disposition}>
+  {assessment && <section class="catalogue-assessment">
+    <h3>Completed catalogue assessment</h3>
+    <dl>
+      {assessment.eligibility_outcome && <div><dt>Eligibility decision</dt><dd>{humanize(assessment.eligibility_outcome)}{assessment.specific_decision && <> · {humanize(assessment.specific_decision)}</>}</dd></div>}
+      {assessment.assessment_date && <div><dt>Assessment date</dt><dd>{formatDate(assessment.assessment_date)}</dd></div>}
+      {assessment.reason && <div><dt>Decision reason</dt><dd>{assessment.reason}</dd></div>}
+      {assessment.information_role && <div><dt>Information role</dt><dd>{humanize(assessment.information_role)}</dd></div>}
+      {assessment.scientific_validation && <div><dt>Scientific validation</dt><dd>{assessment.scientific_validation}</dd></div>}
+      {flatCorrections.map((row) => <div><dt>{humanize(row.field)}</dt><dd>{readableAssessmentValue(parseAssessmentValue(row.value))}</dd></div>)}
+      {accessAssessment.map((row) => <div><dt>{row.label}</dt><dd>{row.value}</dd></div>)}
+      {rightsAssessment.map((row) => <div><dt>{row.label}</dt><dd>{row.value}</dd></div>)}
+      {assessmentSources.length > 0 && <div><dt>Assessment evidence</dt><dd><ol>{assessmentSources.map((source, index) => <li><a href={source} rel="noreferrer">Source {index + 1}: {new URL(source).hostname}</a></li>)}</ol></dd></div>}
+    </dl>
+    {assessmentDetails.length > 0 && <details class="assessment-details">
+      <summary>Additional recorded assessment details</summary>
+      <dl>{assessmentDetails.map((row) => <div><dt>{row.label}</dt><dd><pre>{row.value}</pre></dd></div>)}</dl>
+    </details>}
+  </section>}
+  <p class="review-outcome"><strong>{reviewedAssetDispositionLabel(review)}</strong> · Metadata assessed {formatDate(review.reviewed_at.slice(0, 10))}</p>
+  <p class="review-access">{fieldState(review.access.result)} · {humanize(review.access.route)}
+    {review.access.checked_at && <> · checked {formatDate(review.access.checked_at.slice(0, 10))}</>}
+  </p>
+  {review.follow_up.length > 0 && <ul class="review-findings">{review.follow_up.map((item) => <li>{item.action}</li>)}</ul>}
+  <details class="normalized-metadata">
+    <summary>Screening findings and extracted metadata</summary>
+    <p>Metadata and technical findings retain their original inspection scope and evidence dates. Catalogue eligibility and source scientific validation are recorded separately.</p>
+    <dl>
+      <div><dt>Inspection basis</dt><dd>{humanize(review.inspection_state)}</dd></div>
+      <div><dt>Temporal assessment</dt><dd>{humanize(review.temporal_assessment)}</dd></div>
+      {entries.map(([key, field]) => <div>
+        <dt>{keyLabels[key]}</dt>
+        <dd>{field.value === null ? fieldState(field.state) : displayValue(field.value)}
+          {field.value !== null && <small>{humanize(field.state)}{field.source !== undefined && safeSource(review.sources[field.source]) && <> · <a href={review.sources[field.source]} rel="noreferrer">source</a></>}{field.locator && <> · {field.locator}</>}</small>}
+        </dd>
+      </div>)}
+    </dl>
+    {review.limitations.length > 0 && <ul>{review.limitations.map((note) => <li>{note}</li>)}</ul>}
+    {review.same_url_asset_ids.length > 0 && <p>Same source URL is also recorded as {review.same_url_asset_ids.join(", ")}. These are not independent observations.</p>}
+    <p><a href={withBase("data/asset-reviews.csv")} download>Download screening decisions</a> · <a href={withBase("data/asset-metadata.csv")} download>Download all metadata and field sources</a></p>
+  </details>
+</div>
+<style>
+  .asset-review { margin-block: .9rem; min-width: 0; font-size: .86rem; }
+  .review-outcome { margin: 0; }
+  .review-access { margin: .35rem 0; color: var(--ink-soft); }
+  .review-findings { padding-left: 1.25rem; }
+  .normalized-metadata { margin-top: .65rem; }
+  .assessment-details { margin-block: .75rem; }
+  .assessment-details pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .8rem; }
+  summary { cursor: pointer; font-weight: 650; }
+  dl { margin-top: 1rem; }
+  dl > div { display: grid; grid-template-columns: minmax(9rem,.3fr) minmax(0,1fr); gap: 1rem; padding-block: .65rem; border-bottom: 1px solid var(--rule); }
+  dt { font-weight: 650; } dd { margin: 0; overflow-wrap: anywhere; }
+  small { display: block; color: var(--ink-soft); margin-top: .25rem; }
+  li + li { margin-top: .5rem; }
+  @media (max-width: 42rem) { dl > div { grid-template-columns: 1fr; gap: .35rem; } }
+</style>

@@ -1,0 +1,408 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { withBase } from "../lib/format";
+
+const articleTitle = "Public Data Resources for the 26 August 2026 Nepal Hazard Cascade: A Living Scoping Review and Data Catalogue";
+const description = "Manuscript abstract for the living scoping review and data catalogue of public resources supporting research on the 26 August 2026 Nepal hazard cascade.";
+const specialIssueUrl = "https://www.mdpi.com/journal/geosciences/special_issues/SWDH23BDW1";
+---
+
+<BaseLayout title="Research article" description={description}>
+  <article class="manuscript-page">
+    <header class="manuscript-header">
+      <div class="container manuscript-container">
+        <h1>{articleTitle}</h1>
+
+        <p class="article-authors">
+          <a href="mailto:alexliaskos@geol.uoa.gr">Alexandros Liaskos</a><sup>1,*</sup>,{" "}
+          <a href="mailto:evelpidou@geol.uoa.gr">Niki Evelpidou</a><sup>1</sup>,{" "}
+          <a href="mailto:evspyrou@geol.uoa.gr">Evangelos Spyrou</a><sup>1</sup>, and{" "}
+          <a href="mailto:niteshkhadka48@gmail.com">Nitesh Khadka</a><sup>2</sup>
+        </p>
+
+        <ol class="article-affiliations">
+          <li><sup>1</sup> <a href="https://en.uoa.gr/" target="_blank" rel="noopener noreferrer">National and Kapodistrian University of Athens</a>, University Campus, 15784 Athens, Greece; <a href="mailto:alexliaskos@geol.uoa.gr">alexliaskos@geol.uoa.gr</a>; <a href="mailto:evelpidou@geol.uoa.gr">evelpidou@geol.uoa.gr</a>; <a href="mailto:evspyrou@geol.uoa.gr">evspyrou@geol.uoa.gr</a></li>
+          <li><sup>2</sup> <a href="https://tu.edu.np/" target="_blank" rel="noopener noreferrer">Tribhuvan University</a>, Kathmandu 44600, Nepal; <a href="mailto:niteshkhadka48@gmail.com">niteshkhadka48@gmail.com</a></li>
+        </ol>
+
+        <p class="correspondence"><strong>* Correspondence:</strong> <a href="mailto:alexliaskos@geol.uoa.gr">alexliaskos@geol.uoa.gr</a></p>
+
+        <p class="intended-venue">
+          <strong>Intended venue:</strong>
+          <a href={specialIssueUrl} target="_blank" rel="noopener noreferrer"><cite>Geosciences</cite>, Special Issue “Integrating Geomorphological and Hydrological Insights for Flood Risk Assessment” (MDPI)</a>
+        </p>
+
+      </div>
+    </header>
+
+    <div class="container manuscript-container manuscript-body">
+      <!-- ABSTRACT -->
+      <section id="abstract" class="manuscript-section" aria-labelledby="abstract-heading">
+        <h2 id="abstract-heading">Abstract</h2>
+        <p class="lead-text">Publicly available data and information relevant and supportive to the 26 August 2026 Langtang Lirung disaster cascade are dispersed across repositories, data portals and other online sources, complicating their identification, assessment and reuse. This study presents a living catalogue (<a href="https://evelpidou.nkua.cloud/Nepal-Flood-2026-Catalogue/">https://evelpidou.nkua.cloud/Nepal-Flood-2026-Catalogue/</a>) of these resources and analyses its first assessed release, archived in Zenodo (<a href="https://doi.org/10.5281/zenodo.23034746">https://doi.org/10.5281/zenodo.23034746</a>). The search and charting process, reported in accordance with PRISMA-ScR, comprised 74 documented searches through 24 September 2026, followed by the assessment and reviewing that completed on 28 September. The resulting inventory contains 141 resources and 5,883 assets across eight thematic domains. Structured records preserve provenance, geographic and temporal descriptions, access conditions, rights and source limitations, while the WebGIS (<a href="https://evelpidou.nkua.cloud/Nepal-Flood-2026/">https://evelpidou.nkua.cloud/Nepal-Flood-2026/</a>) enables geographic exploration where spatial information is available. Beyond this initial release, planned periodic searches, event-triggered checks, community nominations and versioned updates provide for continued expansion. The contribution is a traceable inventory connecting pre-event baselines, event observations and subsequent analyses to their supporting material, with documented searches and decisions providing a basis for continued maintenance. The catalogue therefore reduces the time and effort required to identify and access relevant data and information, while lowering the risk of overlooking resources that could inform future investigations of the event. Unlike conventional scoping reviews centred on mapping existing studies or datasets, this approach proposes a new type that systematically identifies and evaluates the data and resources available to support future research.</p>
+
+        <div class="keywords">
+          <strong>Keywords:</strong> cryospheric hazards; debris flow; disaster cascades; remote sensing; flood hydrology; open data catalogue; PRISMA-ScR
+        </div>
+
+        <div class="protocol-banner">
+          <div class="protocol-pill">
+            <span class="pill-label">Search Cutoff</span>
+            <span class="pill-val">24 September 2026; assessed 28 September</span>
+          </div>
+          <div class="protocol-pill">
+            <span class="pill-label">Assessed Release</span>
+            <span class="pill-val">74 Search Runs &bull; 141 Resources &bull; 5,883 Assets</span>
+          </div>
+          <div class="protocol-pill">
+            <span class="pill-label">Reporting standard</span>
+            <span class="pill-val">PRISMA-ScR</span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </article>
+</BaseLayout>
+
+<style>
+  .manuscript-page {
+    padding-bottom: clamp(4rem, 8vw, 6rem);
+  }
+
+  .manuscript-container {
+    max-width: 74rem;
+  }
+
+  .manuscript-header {
+    padding-block: clamp(2.75rem, 5vw, 4.25rem) clamp(2.4rem, 4vw, 3.25rem);
+  }
+
+  .manuscript-header h1 {
+    max-width: 42ch;
+    font-size: clamp(2rem, 3.2vw, 2.75rem);
+    line-height: 1.15;
+  }
+
+  .manuscript-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.55rem 0.9rem;
+    margin: 0 0 1rem;
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+  }
+
+  .article-type {
+    color: var(--ink);
+    font-size: 0.78rem;
+    font-weight: 750;
+    letter-spacing: 0.08em;
+    line-height: 1.25;
+  }
+
+  .article-authors {
+    margin: 1.45rem 0 0;
+    color: var(--ink);
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1.7;
+  }
+
+  .article-authors a {
+    color: inherit;
+    text-decoration-color: #9fb8b7;
+  }
+
+  .article-authors sup,
+  .article-affiliations sup {
+    margin-left: 0.08em;
+    font-size: 0.7em;
+    line-height: 0;
+    vertical-align: super;
+  }
+
+  .article-affiliations {
+    max-width: 86ch;
+    margin: 0.65rem 0 0;
+    padding: 0;
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+    line-height: 1.58;
+    list-style: none;
+  }
+
+  .article-affiliations li + li {
+    margin-top: 0.35rem;
+  }
+
+  .correspondence,
+  .intended-venue {
+    max-width: 86ch;
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+    line-height: 1.58;
+  }
+
+  .correspondence {
+    margin: 1rem 0 0;
+  }
+
+  .intended-venue {
+    margin: 0.35rem 0 0;
+  }
+
+  .correspondence strong,
+  .intended-venue strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .manuscript-quick-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--rule);
+  }
+
+  .manuscript-quick-nav a {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--teal-dark);
+    text-decoration: none;
+    padding: 0.2rem 0.6rem;
+    border-radius: 0.25rem;
+    background: var(--surface-muted);
+    border: 1px solid var(--rule);
+    transition: all 0.15s ease;
+  }
+
+  .manuscript-quick-nav a:hover {
+    background: var(--teal-soft, #e6f0f0);
+    border-color: var(--teal);
+  }
+
+  .manuscript-body {
+    border-top: 1px solid var(--rule-strong);
+    padding-top: clamp(2.5rem, 5vw, 4rem);
+  }
+
+  .manuscript-section {
+    max-width: 108ch;
+    margin-inline: auto;
+    margin-bottom: clamp(2.5rem, 5vw, 4rem);
+  }
+
+  .manuscript-section h2 {
+    margin-top: 0;
+    margin-bottom: 1.25rem;
+    font-size: clamp(1.4rem, 2.2vw, 1.75rem);
+    color: var(--ink);
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 0.4rem;
+  }
+
+  .manuscript-section h3 {
+    margin-top: 1.75rem;
+    margin-bottom: 0.75rem;
+    font-size: clamp(1.15rem, 1.6vw, 1.3rem);
+    color: var(--ink);
+  }
+
+  .manuscript-body p {
+    margin-top: 0;
+    margin-bottom: 1.15rem;
+    font-size: 1.05rem;
+    line-height: 1.7;
+    text-align: justify;
+    text-justify: inter-word;
+    hyphens: auto;
+  }
+
+  .lead-text {
+    font-size: 1.05rem;
+  }
+
+  .keywords {
+    margin-top: 1.25rem;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    padding: 0.75rem 1rem;
+    background: var(--surface-muted);
+    border-left: 3px solid var(--teal);
+    border-radius: 0 0.25rem 0.25rem 0;
+  }
+
+  .protocol-banner {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .protocol-pill {
+    display: flex;
+    flex-direction: column;
+    padding: 0.75rem 1rem;
+    background: var(--surface-muted);
+    border: 1px solid var(--rule);
+    border-radius: 0.35rem;
+  }
+
+  .pill-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ink-soft);
+    margin-bottom: 0.25rem;
+  }
+
+  .pill-val {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  /* Academic Table Styling (Booktabs) */
+  .table-wrapper {
+    margin: 2rem 0;
+    overflow-x: auto;
+  }
+
+  .table-caption {
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin-bottom: 0.6rem;
+    color: var(--ink);
+  }
+
+  .academic-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+    line-height: 1.5;
+    border-top: 2px solid var(--ink);
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .academic-table th,
+  .academic-table td {
+    padding: 0.65rem 0.85rem;
+    text-align: left;
+  }
+
+  .academic-table thead th {
+    font-weight: 700;
+    border-bottom: 1px solid var(--ink);
+    color: var(--ink);
+  }
+
+  .academic-table tbody tr {
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .academic-table tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  .academic-table tfoot th {
+    font-weight: 700;
+    border-top: 1px solid var(--ink);
+    color: var(--ink);
+    padding-top: 0.75rem;
+  }
+
+  .academic-table .text-right {
+    text-align: right;
+  }
+
+  .table-note {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+  }
+
+  .back-matter {
+    border-top: 1px solid var(--rule);
+    padding-top: 1.5rem;
+    margin-top: 3rem;
+  }
+
+  .back-matter h3 {
+    font-size: 1.05rem;
+    margin-top: 1.25rem;
+    margin-bottom: 0.4rem;
+    color: var(--ink);
+  }
+
+  .back-matter p {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    text-align: left;
+  }
+
+  .references {
+    border-top: 1px solid var(--rule);
+    padding-top: 2rem;
+  }
+
+  .reference-list {
+    margin: 0;
+    padding-left: 1.5rem;
+    font-size: 0.92rem;
+    line-height: 1.6;
+    color: var(--ink-soft);
+  }
+
+  .reference-list li {
+    margin-bottom: 0.85rem;
+    text-align: left;
+  }
+
+  .reference-list em {
+    color: var(--ink);
+    font-style: italic;
+  }
+
+  .reference-list strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  @media (max-width: 54rem) {
+    .manuscript-body p {
+      text-align: left;
+    }
+  }
+
+  @media (max-width: 42rem) {
+    .manuscript-header {
+      padding-block: 3rem 2.75rem;
+    }
+
+    .manuscript-header h1 {
+      font-size: clamp(1.8rem, 8.6vw, 2.3rem);
+      line-height: 1.14;
+      overflow-wrap: anywhere;
+    }
+
+    .article-authors {
+      margin-top: 1.6rem;
+      font-size: 1rem;
+    }
+
+    .intended-venue,
+    .article-affiliations {
+      overflow-wrap: anywhere;
+    }
+
+    .manuscript-body {
+      padding-top: 3rem;
+    }
+  }
+</style>

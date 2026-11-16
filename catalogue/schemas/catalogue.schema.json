@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://evelpidou.nkua.cloud/Nepal-Flood-2026-Catalogue/data/schemas/catalogue.schema.json",
+  "title": "Public Data Resources for the 26 August 2026 Nepal Hazard Cascade",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status_as_of",
+    "scope",
+    "reviewed_resource_count",
+    "resources"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "2.0.0"
+    },
+    "resources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "resource_id",
+          "canonical_title",
+          "title_original",
+          "title_language",
+          "translation_status",
+          "provider",
+          "landing_url",
+          "reviewed_on",
+          "current_status",
+          "assets"
+        ],
+        "properties": {
+          "resource_id": {
+            "type": "string",
+            "pattern": "^(?:(?:res-|rec_)[0-9a-f-]{36}|added_by_review_[A-Za-z0-9_-]+)$"
+          },
+          "canonical_title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title_original": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title_language": {
+            "type": "string",
+            "minLength": 2
+          },
+          "translation_status": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string",
+            "minLength": 1
+          },
+          "landing_url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "reviewed_on": {
+            "type": "string",
+            "format": "date"
+          },
+          "current_status": {
+            "type": "string"
+          },
+          "assets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "asset_id",
+                "title",
+                "title_original",
+                "asset_url",
+                "reviewed_on",
+                "current_status"
+              ],
+              "properties": {
+                "asset_id": {
+                  "type": "string",
+                  "pattern": "^(?:(?:ast-|acand_|added-)[0-9a-f-]{36}|added_by_review_[A-Za-z0-9_-]+)$"
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "title_original": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "asset_url": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "reviewed_on": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "current_status": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "status_as_of": {
+      "type": "string",
+      "format": "date"
+    },
+    "scope": {
+      "const": "reviewed_catalogue_resources"
+    },
+    "reviewed_resource_count": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

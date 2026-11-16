@@ -1,0 +1,101 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getAssetReviews, dispositionLabels } from "../../lib/asset-review";
+import { humanize, withBase } from "../../lib/format";
+const { summary } = await getAssetReviews();
+---
+<BaseLayout title="Asset assessment and metadata review" description="Completed catalogue assessment and the preserved technical metadata, access evidence and dated screening findings.">
+  <header class="page-head page-head--compact"><div class="container">
+    <p><a href={withBase("assets/")}>Back to assets</a></p>
+    <h1>Asset assessment and metadata review</h1>
+    <p>The current online indexes present 141 included resources and 5,883 assets assessed on 28 September 2026. The <a href={withBase("assessment/")}>complete assessment and exclusion ledger</a> records decisions and corrections. The release is archived on <a href="https://doi.org/10.5281/zenodo.23034746">Zenodo</a>; earlier technical findings below retain their original scope and evidence dates.</p>
+    <p>The 8 September 2026 UTC road-record phase assessed 14 Department of Roads and BIPAD links representing seven shared-source records, preserving 6,317 earlier assessments and their evidence dates. Read the <a href={withBase("search-reports/2026-09-08-roads.md")}>road-record report</a> for source relationships, conflicting dates and the remaining gaps in locally documented data. The preceding <a href={withBase("search-reports/2026-09-08-bipad.md")}>BIPAD assessment</a> covered five station-query and flood-alert assets, the <a href={withBase("search-reports/2026-09-08-hydrology.md")}>hydrology assessment</a> covered 106 assets and the <a href={withBase("search-reports/2026-09-08-repository-assets.md")}>repository assessment</a> covered 365.</p>
+  </div></header>
+  <article class="container review-report">
+    <section>
+      <h2>Official road blockages and recorded end dates</h2>
+      <p>Seven Department of Roads records match seven BIPAD copies by their source identifiers. Names identify the locality, road and blockage-start date. Metadata separates status, estimated end, actual end, repair-duration labels and source update times. The existing HDX road-blockage resource contains crowdsourced satellite interpretations; no individual equivalence with these official records has been established.</p>
+      <p>One CLOSED record also has an actual-end date, another is only PARTIAL_OPEN, and one estimated end precedes its stated start. Department of Roads timestamps do not state a time zone. These findings remain visible in the asset assessments and prevent unqualified claims about reopening or event timing.</p>
+      <p><a href={withBase("search-reports/2026-09-08-roads-holdings.md")}>Read the source leads recorded in the 8 September holdings report</a>.</p>
+    </section>
+    <section>
+      <h2>BIPAD river archives and flood-alert records</h2>
+      <p>Two station query routes returned 161 Malekhu readings and 467 Galchi readings. Every recovered Galchi timestamp and value already appears in the DHM series. The catalogue links the distributions and retains their different coverage; these are not independent measurements.</p>
+      <p>Three corridor flood-alert records preserve alert start, database creation, expiry and embedded observation times separately. Their embedded measurements are later than the alert starts, and missing expiry does not establish an ongoing flood. Unit, gauge-reference, quality-control and reuse questions remain explicit in the five asset assessments.</p>
+    </section>
+    <section>
+      <h2>Recorded technical metadata outcomes</h2>
+      <p>{summary.assets_without_recorded_follow_up.toLocaleString("en")} records have no recorded follow-up flag. {summary.assets_needing_follow_up.toLocaleString("en")} have a recorded access, identity, rights or interpretation constraint. Missing technical fields remain explicitly unknown. The absence of a flag does not establish scientific validity or unrestricted reuse.</p>
+      <p>This register preserves technical metadata assessments separately from completed catalogue eligibility decisions. Technical dispositions describe inspection, access and information roles; the completed decision for each current asset is shown in its details. Scientific validation and reuse permissions retain their source-specific limitations.</p>
+      <table><thead><tr><th scope="col">Disposition</th><th scope="col">Assets</th></tr></thead><tbody>
+        {Object.entries(summary.dispositions).map(([state, count]) => <tr><th scope="row">{dispositionLabels[state] ?? humanize(state)}</th><td>{count.toLocaleString("en")}</td></tr>)}
+      </tbody></table>
+      <p><a href={withBase("assets/?review=follow_up")}>Browse assets with follow-up</a></p>
+    </section>
+    <section>
+      <h2>Hydrology sources added on 8 September</h2>
+      <p>Four official-source searches added 79 station-page/query routes and 27 document links. Names distinguish river water levels, rainfall, forecasts, event reports, historical flood context and access guidance. Each asset records source identity, actual temporal coverage, access, rights and interpretation limits.</p>
+      <p>Missing intervals, early telemetry endings, unresolved station identities, a missing bulletin date, denied access and unreadable document text remain explicit. Current map labels are not historical flood observations; gauge stage is not discharge or inundation depth. All 106 new assets retain a reuse-scope follow-up.</p>
+    </section>
+    <section>
+      <h2>Earlier repository assessment on 8 September</h2>
+      <ul>
+        <li>365 assets received descriptive names, with original filenames and identifiers retained. Names distinguish observations, modelled products, historical baselines, previews and documentation.</li>
+        <li>294 records received metadata and bounded structure inspection; 71 were assessed from source metadata without structural inspection of the file body. Fields include dates, versions, grids, layers, variables, units, rights and interpretation limits.</li>
+        <li>23 archive directories were inventoried. Complete-response hashes established 25 unique pairs of identical content; alternative copies remain linked without becoming independent evidence.</li>
+        <li>Six retracted products and two packages containing retracted material are explicitly labelled. They no longer receive the default asset-opening action. The original source references remain in the assessment.</li>
+        <li>Source conflicts, an empty observed-event GeoPackage, empty forecast collections, mixed-epoch elevations and uncalibrated radar encoding remain explicit follow-ups. A modelled 2 m inundation-depth threshold is distinguished from grid resolution.</li>
+        <li>113 assets in this phase retain at least one follow-up. Retaining a candidate means keeping it in the evidence inventory, with its limitations visible.</li>
+      </ul>
+      <p>The earlier assessment's OPERA cloud flags, Charter authorization and malformed-route findings, NISAR acquisition pairs, GFM reference layers and survey-point distinctions remain in the snapshot records with their original dates.</p>
+    </section>
+    <section>
+      <h2>Unresolved constraints</h2>
+      <table><thead><tr><th scope="col">Finding</th><th scope="col">Affected asset records</th></tr></thead><tbody>
+        {Object.entries(summary.issue_counts).map(([code, count]) => <tr><th scope="row">{humanize(code.toLowerCase())}</th><td>{count}</td></tr>)}
+      </tbody></table>
+      <p>An asset can have more than one finding, so these counts overlap. The follow-up export records the required action for each affected asset. Authentication, an unavailable response, missing content and an invalid URI are separate outcomes.</p>
+      <p>Rights follow-up distinguishes repository software licences, deposited data licences, compiled upstream data and individually credited figures. An accessible file does not by itself establish permission to redistribute it.</p>
+    </section>
+    <section>
+      <h2>Method and evidence limits</h2>
+      <p>The 8 September inventory contained 270 assets under 27 reviewed resources and 6,061 asset links under 100 candidate resources. Asset counts include supporting material and access routes; they are not counts of independent resources. At that stage, candidate asset status followed its parent workflow, and resource eligibility and manuscript inclusion were unassigned. The completed 28 September decisions now govern the retained inventory while the earlier metadata evidence is preserved.</p>
+      <p>The road-record phase recorded 25 anonymous source requests and two supplementary web-navigation queries. BIPAD returned 25 road identifiers; Department of Roads history queries returned 10. Each source retained seven matching records. The local holdings comparison covers 94 source-table rows, including aliases, literature and repeated citations; it is not a count of newly discovered datasets.</p>
+      <p>The BIPAD phase recorded 17 anonymous native requests and separately documented two supplementary web-navigation queries. Four station identities and 58 alert IDs were screened; 628 historical observation rows were charted separately from discovery records. The API’s placeholder total was excluded from all result counts.</p>
+      <p>The hydrology phase recorded 212 anonymous request attempts and used a 10 MiB response limit. The preceding repository assessment used 771 requests, with limits of 10 MiB per complete file, 2 MiB per range and 8 MiB per ZIP-directory inspection. These phases covered selected metadata, structured responses, package inventories and document text. Research code was not executed and scientific observations or raster pixels were not independently validated.</p>
+      <p>Values distinguish provider statements, current HTTP observations, derived metadata, representative evidence and unknown fields. A HEAD response establishes endpoint behavior, not valid file content. A licence identifier left unknown does not mean that no rights statement exists. Source acquisition resolution is not applied to preview pixels.</p>
+      <p>Nominal OPERA grids and interpretation limits follow the <a href="https://www.jpl.nasa.gov/go/opera/products/dswx-product-suite/">JPL DSWx product documentation</a>. Composite windows and cloud-shadow cautions follow <a href="https://lance.modaps.eosdis.nasa.gov/flood/">NASA LANCE flood documentation</a>. Free-account access is documented by <a href="https://hyp3-docs.asf.alaska.edu/nisar-docs/access-overview/">NASA/ASF</a> and <a href="https://dataspace.copernicus.eu/">Copernicus Data Space</a>; Charter access has <a href="https://disasterscharter.org/universal-access">separate authorization conditions</a>.</p>
+      <p>Combined register as of: <time datetime={summary.as_of}>{summary.as_of}</time>. Individual records retain their original metadata and access-check dates alongside the completed eligibility assessment.</p>
+    </section>
+    <section>
+      <h2>Download the combined metadata register</h2>
+      <p>The technical metadata register covers the current retained inventory. The <a href={withBase("assessment/")}>completed decision ledger</a> also preserves excluded and audit-only records.</p>
+      <ul>
+        <li><a href={withBase("data/asset-reviews.csv")} download>One screening record per asset (CSV)</a></li>
+        <li><a href={withBase("data/asset-metadata.csv")} download>Metadata values, field states, source URLs and locators (CSV)</a></li>
+        <li><a href={withBase("data/asset-follow-up.csv")} download>All unresolved constraints and follow-up actions (CSV)</a></li>
+        <li><a href={withBase("data/asset-reviews.json")} download>Complete review and metadata (JSON)</a></li>
+        <li><a href={withBase("data/asset-review-summary.json")} download>Counts and review scope (JSON)</a></li>
+      </ul>
+      <h3>8 September phase evidence</h3>
+      <ul>
+        <li><a href={withBase("search-reports/2026-09-08-repository-assets.md")}>Readable assessment report</a></li>
+        <li><a href={withBase("search-reports/2026-09-08-repository-assets-titles.csv")} download>Display names and original source titles (CSV)</a></li>
+        <li><a href={withBase("search-reports/2026-09-08-repository-assets-metadata.csv")} download>Source-linked metadata for this phase (CSV)</a></li>
+        <li><a href={withBase("search-reports/2026-09-08-repository-assets-archive-contents.csv")} download>Archive contents (CSV)</a></li>
+        <li><a href={withBase("search-reports/2026-09-08-repository-assets-identical-content.csv")} download>Identical-content relationships (CSV)</a></li>
+        <li><a href={withBase("search-reports/2026-09-08-repository-assets-requests.json")} download>Actual requests, ranges and responses (JSON)</a></li>
+      </ul>
+    </section>
+  </article>
+</BaseLayout>
+<style>
+  .review-report { max-width: 68rem; padding-bottom: 5rem; }
+  section { margin-bottom: 3rem; }
+  p, li { max-width: 80ch; }
+  li + li { margin-top: .6rem; }
+  table { width: 100%; border-collapse: collapse; margin-block: 1.5rem; }
+  th, td { text-align: left; padding: .65rem; border-bottom: 1px solid var(--rule); overflow-wrap: anywhere; }
+  tbody th { font-weight: 400; } td { font-variant-numeric: tabular-nums; }
+  time { overflow-wrap: anywhere; }
+</style>

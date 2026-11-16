@@ -1,0 +1,287 @@
+---
+import type { CandidateRecord, PublicSearchRun, Resource } from "../../lib/types";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getPublicData } from "../../lib/data";
+import { getResourceAssessments, type AssessmentResource } from "../../lib/assessment";
+import { fieldState, formatDate, splitValues, withBase } from "../../lib/format";
+
+export async function getStaticPaths() {
+  const [{ candidates, resources, searchRuns }, assessments] = await Promise.all([getPublicData(), getResourceAssessments()]);
+  const candidateById = new Map(candidates.map((candidate) => [candidate.record_id, candidate]));
+  const resourceById = new Map(resources.map((resource) => [resource.resource_id, resource]));
+  const assessmentById = new Map(assessments.map((assessment) => [assessment.resource_id, assessment]));
+
+  return searchRuns.map((search) => ({
+    params: { run_id: search.run_id },
+    props: {
+      search,
+      linkedCandidates: splitValues(search.record_ids)
+        .map((recordId) => candidateById.get(recordId))
+        .filter((candidate): candidate is CandidateRecord => candidate !== undefined),
+      linkedResources: splitValues(search.record_ids)
+        .map((recordId) => resourceById.get(recordId))
+        .filter((resource): resource is Resource => resource !== undefined),
+      linkedDecisions: splitValues(search.record_ids)
+        .filter((recordId) => !resourceById.has(recordId) && !candidateById.has(recordId))
+        .map((recordId) => assessmentById.get(recordId))
+        .filter((assessment): assessment is AssessmentResource => assessment !== undefined),
+    },
+  }));
+}
+
+interface Props {
+  search: PublicSearchRun;
+  linkedCandidates: CandidateRecord[];
+  linkedResources: Resource[];
+  linkedDecisions: AssessmentResource[];
+}
+
+const { search, linkedCandidates, linkedResources, linkedDecisions } = Astro.props;
+const criteriaRows = (value: string) => value.split(/;\s*/).map((item) => {
+  const separator = item.indexOf(":");
+  return separator === -1
+    ? ["Criterion", item.trim()]
+    : [item.slice(0, separator).trim(), item.slice(separator + 1).trim()];
+}).filter(([, detail]) => detail);
+const description = `${search.search_name}. Search method and results.`;
+---
+
+<BaseLayout title={search.search_name} description={description}>
+  <header class="page-head search-head">
+    <div class="container search-container">
+      <p class="back-link">
+        <a href={withBase("searches/")}>
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M14 8H2.5M7 3.5 2.5 8 7 12.5"></path>
+          </svg>
+          <span>Back to searches</span>
+        </a>
+      </p>
+      <h1>{search.search_name}</h1>
+      <dl class="search-summary">
+        <div><dt>Outcome</dt><dd>{fieldState(search.status)}</dd></div>
+        <div>
+          <dt>Search date</dt>
+          <dd><time datetime={search.searched_on}>{formatDate(search.searched_on)}</time></dd>
+        </div>
+        <div>
+          <dt>Source</dt>
+          <dd>{search.source_name}</dd>
+        </div>
+        <div>
+          <dt>Reference</dt>
+          <dd>{search.run_id}</dd>
+        </div>
+      </dl>
+    </div>
+  </header>
+
+  <main class="search-page">
+    <div class="container search-container">
+      <dl class="search-details">
+        <div><dt>Aim</dt><dd>{search.aim}</dd></div>
+        <div><dt>Source and interface</dt><dd><a href={search.interface_url} rel="noreferrer">{search.source_name} — {search.interface_name}</a></dd></div>
+        <div><dt>Search method</dt><dd>{search.exact_strategy}</dd></div>
+        {["RUN-20260908-047", "RUN-20260908-048"].includes(search.run_id) && (
+          <div><dt>Methods and evidence files</dt><dd><a href={withBase("search-reports/2026-09-08-roads.md")}>Read the road-record search, source comparisons, screening decisions and remaining data gaps</a></dd></div>
+        )}
+        {["RUN-20260908-045", "RUN-20260908-046"].includes(search.run_id) && (
+          <div><dt>Methods and evidence files</dt><dd><a href={withBase("search-reports/2026-09-08-bipad.md")}>Read the BIPAD river and flood-alert report, exact queries, screening dispositions and asset assessments</a></dd></div>
+        )}
+        {["RUN-20260908-041", "RUN-20260908-042", "RUN-20260908-043", "RUN-20260908-044"].includes(search.run_id) && (
+          <div><dt>Methods and evidence files</dt><dd><a href={withBase("search-reports/2026-09-08-hydrology.md")}>Read the hydrology report, exact queries, discovery dispositions and asset assessments</a></dd></div>
+        )}
+        <div>
+          <dt>Criteria</dt>
+          <dd>
+            <table class="criteria-table">
+              <tbody>
+                {criteriaRows(search.filters_and_criteria).map(([criterion, detail]) => (
+                  <tr><th scope="row">{criterion}</th><td>{detail}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </dd>
+        </div>
+        <div><dt>Coverage</dt><dd>{search.coverage}</dd></div>
+        <div><dt>Stopping rule</dt><dd>{search.stopping_rule}</dd></div>
+        <div>
+          <dt>Result</dt>
+          <dd>
+            <p>{search.result_summary}</p>
+            {(linkedResources.length > 0 || linkedDecisions.length > 0) && <p class="assessment-context">Resource links below show the completed assessment outcomes. The search result above records discovery at the search date.</p>}
+            {linkedResources.map((resource) => (
+              <p><a href={withBase(`resources/${resource.resource_id}/`)}>{resource.canonical_title}</a></p>
+            ))}
+            {linkedCandidates.map((candidate) => (
+              <p><a href={withBase(`under-review/${candidate.record_id}/`)}>{candidate.display_title}</a></p>
+            ))}
+            {linkedDecisions.map((assessment) => (
+              <p><a href={withBase(`under-review/${assessment.resource_id}/`)}>{assessment.reviewed_title || assessment.original_title || assessment.resource_id}</a> — {assessment.eligibility_outcome === "exclude" ? "Excluded" : fieldState(assessment.eligibility_outcome)}</p>
+            ))}
+          </dd>
+        </div>
+      </dl>
+    </div>
+  </main>
+</BaseLayout>
+
+<style>
+  .search-head {
+    padding-bottom: clamp(2.5rem, 5vw, 4rem);
+  }
+
+  .search-container {
+    max-width: 64rem;
+  }
+
+  .back-link {
+    margin: 0 0 1.4rem;
+    font-size: 0.9rem;
+  }
+
+  .back-link a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .back-link svg {
+    width: 1rem;
+    height: 1rem;
+    flex: 0 0 auto;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .search-head h1 {
+    max-width: 34ch;
+    font-size: clamp(2rem, 4.6vw, 3.25rem);
+    line-height: 1.12;
+  }
+
+  .search-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.5rem;
+    margin: clamp(2rem, 4vw, 3rem) 0 0;
+  }
+
+  .search-summary div {
+    min-width: 0;
+  }
+
+  .search-summary dt,
+  .search-details dt {
+    color: var(--ink-soft);
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+
+  .search-summary dd {
+    margin: 0.25rem 0 0;
+    font-size: 0.94rem;
+  }
+
+  .search-page {
+    padding-bottom: clamp(4rem, 8vw, 6rem);
+  }
+
+  .search-details {
+    margin: 0;
+    border-top: 1px solid var(--rule-strong);
+  }
+
+  .search-details > div {
+    display: grid;
+    grid-template-columns: minmax(9rem, 0.25fr) minmax(0, 1fr);
+    gap: 2rem;
+    border-bottom: 1px solid var(--rule);
+    padding-block: 1.1rem;
+  }
+
+  .search-details dd {
+    margin: 0;
+  }
+
+  .search-details dd > :first-child {
+    margin-top: 0;
+  }
+
+  .search-details dd > :last-child {
+    margin-bottom: 0;
+  }
+
+  .criteria-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 0.4rem;
+  }
+
+  .criteria-table th,
+  .criteria-table td {
+    padding: 0;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .criteria-table th {
+    width: 9rem;
+    padding-right: 1rem;
+    color: var(--ink-soft);
+    font-size: 0.88rem;
+    font-weight: 600;
+  }
+
+  @media (max-width: 42rem) {
+    .search-head {
+      padding-block: 3rem 2.75rem;
+    }
+
+    .search-head h1 {
+      font-size: clamp(1.85rem, 9vw, 2.35rem);
+      overflow-wrap: anywhere;
+    }
+
+    .search-summary {
+      grid-template-columns: 1fr;
+      gap: 1.15rem;
+    }
+
+    .search-details > div {
+      grid-template-columns: 1fr;
+      gap: 0.45rem;
+      padding-block: 1.4rem;
+    }
+
+    .criteria-table,
+    .criteria-table tbody,
+    .criteria-table tr,
+    .criteria-table th,
+    .criteria-table td {
+      display: block;
+      width: 100%;
+    }
+
+    .criteria-table {
+      border-spacing: 0;
+    }
+
+    .criteria-table tr + tr {
+      margin-top: 1rem;
+    }
+
+    .criteria-table th {
+      padding: 0;
+      font-size: 0.78rem;
+    }
+
+    .criteria-table td {
+      margin-top: 0.08rem;
+      overflow-wrap: anywhere;
+    }
+  }
+</style>
