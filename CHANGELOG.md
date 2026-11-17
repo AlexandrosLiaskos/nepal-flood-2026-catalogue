@@ -1,5 +1,14 @@
 # Public catalogue change history
 
+## 17 November 2026 — Visit counter address and stop signal
+
+- `deployment/nginx.conf` passes `/api/visit` to the counter by its container name,
+  `nepal-flood-2026-catalogue-counter`, which nginx looks up through the Docker resolver every 30 seconds.
+  The service name `counter` used before is shared by other visit counters on the network `nkua-proxy`.
+- `deployment/compose.yaml` stops the counter with SIGINT. The counter runs as PID 1 without a SIGTERM
+  handler, so it ignored the default stop signal and was killed after 10 seconds.
+- The workflow tests `deployment/nginx.conf` without mapping the name `counter`.
+
 ## 16 November 2026 — Source code on GitHub
 
 - Published the source code of the site in this repository, without the records of the catalogue, the search reports, institutional marks and third-party photographs.

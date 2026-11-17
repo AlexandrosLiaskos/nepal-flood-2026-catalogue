@@ -102,6 +102,10 @@ forwards <https://evelpidou.nkua.cloud/Nepal-Flood-2026-Catalogue/> to port 8080
 To publish a new build, keep a copy of `site/` and replace its contents with those of `dist/`. The web
 server reads the files at each request, so no restart is needed.
 
+The container mounts `nginx.conf` as a single file, so a new version must be written into the existing
+file (for example `cat deployment/nginx.conf > /opt/nepal-flood-2026-catalogue/nginx.conf`) and loaded
+with `docker exec nepal-flood-2026-catalogue nginx -s reload`.
+
 ## Citation and licence
 
 To cite the catalogue, use its Zenodo DOI, as given in [CITATION.cff](CITATION.cff). As
