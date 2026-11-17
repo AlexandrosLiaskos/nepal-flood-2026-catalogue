@@ -106,6 +106,9 @@ The container mounts `nginx.conf` as a single file, so a new version must be wri
 file (for example `cat deployment/nginx.conf > /opt/nepal-flood-2026-catalogue/nginx.conf`) and loaded
 with `docker exec nepal-flood-2026-catalogue nginx -s reload`.
 
+Counting requests from robots and from cloud or hosting networks are answered with 204 and not counted;
+the rules and the list of networks are described in [deployment/visit-filter](deployment/visit-filter/README.md).
+
 ## Citation and licence
 
 To cite the catalogue, use its Zenodo DOI, as given in [CITATION.cff](CITATION.cff). As

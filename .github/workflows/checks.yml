@@ -48,6 +48,11 @@ jobs:
           python -m unittest discover --start-directory tests --verbose
       - name: Container file
         run: docker compose --file deployment/compose.yaml config --quiet
+      - name: Visit filter list
+        run: |
+          cp deployment/nginx.conf "$RUNNER_TEMP/nginx.conf"
+          python deployment/visit-filter/visit_filter_networks.py write deployment/visit-filter/networks.txt "$RUNNER_TEMP/nginx.conf"
+          diff -q deployment/nginx.conf "$RUNNER_TEMP/nginx.conf"
       - name: Web server configuration
         run: |
           docker run --rm --network none \

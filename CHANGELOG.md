@@ -1,5 +1,11 @@
 # Public catalogue change history
 
+## 17 November 2026 — Visits of people
+
+- The visit count was corrected from 12,095 to 1,245, the number of visits by people. It was measured in the front web server's log (entries from 4 September 2026): every counting request (POST to `/Nepal-Flood-2026-Catalogue/api/visit`, status 200) was left out as automated if its user agent named a robot, an automation tool or an HTTP library, if it came from the server itself, or if its address belonged to a cloud or hosting network. 1,243 requests were by people; the 10 visits counted on 3-4 September 2026, before the log begins, are estimated at 2. Of the 13,206 counted requests, 9,982 came from cloud or hosting networks (9,387 from Tencent Cloud) and 1,970 named a robot (Meta 1,656, Google 179, OpenAI 81).
+- `deployment/nginx.conf` answers counting requests from robots and from cloud or hosting networks with 204 and does not pass them to the counter (see `deployment/visit-filter/README.md`). It trusts `X-Forwarded-For` from the front server only.
+- `deployment/visit-filter/` holds the list of networks with its sources and date, and the program that fetches it and writes it into `nginx.conf`. The workflow checks that `nginx.conf` matches the list.
+
 ## 17 November 2026 — Visit counter address and stop signal
 
 - `deployment/nginx.conf` passes `/api/visit` to the counter by its container name,
